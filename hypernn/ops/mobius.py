@@ -57,3 +57,13 @@ def squared_distance(a, b, c=default_c):
     atanh_arg = sqrt_c * norm(diff)
     dist = 2. / sqrt_c * atanh(atanh_arg)
     return dist**2
+
+
+def scalar_mul(r, a, c=default_c):
+    """dim(r) =(1,), dim(a)=batch, emb"""
+    a = a + perterb
+    norm_a = norm(a)
+    sqrt_c = torch.sqrt(c)
+    numerator = torch.tanh(r * atanh(sqrt_c * norm_a))
+    res = numerator / (sqrt_c * norm_a) * a
+    return project_in_ball(res)
