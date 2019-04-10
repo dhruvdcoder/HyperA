@@ -9,10 +9,11 @@ import math
 class Linear(nn.Module):
     """Hyperbolic linear transformation layer"""
 
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, bias=True, c=m.default_c):
         super(Linear, self).__init__()
         self.in_features = in_features
-        self.out_features
+        self.out_features = out_features
+        self.c = c
         self.weight = nn.Parameter(torch.Tensor(in_features, out_features))
         if bias:
             self.bias = nn.Parameter(torch.Tensor(out_features))
@@ -30,7 +31,8 @@ class Linear(nn.Module):
             nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, inp):
-        return m.add(m.matmul(self.weight, inp), self.bias)
+        return m.add(
+            m.matmul(self.weight, inp, self.c), self.bias.unsqueeze(0), self.c)
 
     def extra_repr(self):
         return 'in_features={}, out_features={}, bias={}'.format(

@@ -38,7 +38,7 @@ def project_in_ball(x, c=default_c):
 
 def add(a, b, c=default_c):
     """Mobius a+b. dim(a)=dim(b)=batch,emb"""
-    b += perterb
+    b = b + perterb
     norm_sq_a = c * norm_sq(a)
     norm_sq_b = c * norm_sq(b)
     inner_ab = c * dot(a, b)
@@ -98,7 +98,7 @@ def log_map(x, y, c):
 
 def exp_map_0(v, c):
     """special case when x=0"""
-    v += perterb
+    v = v + perterb
     norm_v = norm(v)
     sqrt_c = torch.sqrt(c)
     res = torch.tanh(sqrt_c * norm_v) / (sqrt_c * norm_v) * v
@@ -119,7 +119,7 @@ def matmul(M, x, c):
     dim(M) = emb, output
     dim(out) = batch, output
     """
-    x += perterb
+    x = x + perterb
     prod = torch.matmul(x, M) + perterb
     prod_n = norm(prod)
     x_n = norm(x)
