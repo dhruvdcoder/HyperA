@@ -67,3 +67,63 @@ def scalar_mul(r, a, c=default_c):
     numerator = torch.tanh(r * atanh(sqrt_c * norm_a))
     res = numerator / (sqrt_c * norm_a) * a
     return project_in_ball(res)
+
+
+def conformal_factor(x, c=default_c):
+    """dim(x) = batch, emb"""
+    return 2. / (1. - c * dot(x, x))
+
+
+def exp_map(x, v, c):
+    """ x is the point on the manifold (orgin for the tangent space)
+    v is a vector in the tangent space around x
+    dim(x) = dim(v) = batch, emb
+    """
+    v = v + perterb
+    norm_v = norm(v)
+    sqrt_c = torch.sqrt(c)
+    displacement_vector = torch.tanh(
+        sqrt_c * conformal_factor(x, c) * norm_v / 2.) / (sqrt_c * norm_v) * v
+    return add(x, displacement_vector)
+
+
+def log_map(x, y, c):
+    diff = add(-x, y, c) + perterb
+    diff_n = norm(diff)
+    sqrt_c = torch.sqrt(c)
+    res = ((2. / (sqrt_c * conformal_factor(x, c))) * atanh(sqrt_c * diff_n) /
+           diff_n) * diff
+    return res
+
+
+def exp_map_0(v, c):
+    """special case when x=0"""
+    v += perterb
+    norm_v = norm(v)
+    sqrt_c = torch.sqrt(c)
+    res = torch.tanh(sqrt_c * norm_v) / (sqrt_c * norm_v) * v
+    return project_in_ball(res, c)
+
+
+def log_map_0(y, c):
+    y = y + perterb
+    y_n = norm(y)
+    sqrt_c = torch.sqrt(c)
+    return (1. / (sqrt_c * y_n)) * atanh(sqrt_c * y_n) * y
+
+
+def matmul(M, x, c):
+    """ 
+    out = x M
+    dim(x) = batch, emb
+    dim(M) = emb, output
+    dim(out) = batch, output
+    """
+    x += perterb
+    prod = torch.matmul(x, M) + perterb
+    prod_n = norm(prod)
+    x_n = norm(x)
+    sqrt_c = torch.sqrt(c)
+    res = 1. / sqrt_c * (
+        torch.tanh(prod_n / x_n * atanh(sqrt_c * x_n)) * prod) / prod_n
+    return project_in_ball(res, c)
