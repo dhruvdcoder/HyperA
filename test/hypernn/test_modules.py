@@ -49,6 +49,25 @@ def test_Linear_grad():
         test_case()
 
 
+def test_Logits_grad():
+    emb_size = 100
+    K = 5
+    batch_size = 64
+
+    c_val = np.array([1.])
+    c = torch.Tensor(c_val).double()
+    hnn_logits = hnn.Logits(emb_size, K, c=c).double()
+
+    def test_case():
+        x = torch.tensor(
+            np_utils.random_vec((batch_size, emb_size)),
+            requires_grad=True).double()
+        torch.autograd.gradcheck(hnn_logits, x)
+
+    for i in range(10):
+        test_case()
+
+
 if __name__ == '__main__':
     #test_Linear_forward()
     test_Linear_grad()

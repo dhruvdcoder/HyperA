@@ -26,6 +26,11 @@ def atanh(x):
     return 0.5 * torch.log((1 + x_const) / (1 - x_const))
 
 
+def asinh(x):
+    """ dim(x)=any. Applies asinh to each entry"""
+    return torch.log(x + (x**2 + 1)**0.5)
+
+
 def project_in_ball(x, c=default_c):
     """dim(x) = batch, emb"""
     # https://discuss.pytorch.org/t/how-to-use-condition-flow/644/4
@@ -127,3 +132,47 @@ def matmul(M, x, c):
     res = 1. / sqrt_c * (
         torch.tanh(prod_n / x_n * atanh(sqrt_c * x_n)) * prod) / prod_n
     return project_in_ball(res, c)
+
+
+def logits(x, p, a, c):
+    """Finds the logits to be used by softmax
+
+    Arguments:
+
+        x : Input tensor with shape (batch, hidden_dim)
+
+        p : Parameter matrix of hyperbolic MLR with shape
+            (num_classes, hidden_dim) (see eq. 25 in HNN paper)
+
+        a : Parameter matrix of hyperbolic MLR with shape
+            (num_classes, hidden_dim) (see eq. 25 in HNN paper)
+        
+        c : c
+    """
+    # Because our mobius operations are only
+    # defined for 2-dimensions, will form the
+    # logit matrix of shape (batch, num_classes)
+    # column by column
+    assert p.shape == a.shape
+    assert p.size(1) == x.size(1)
+    dot_px_as = []
+    cf_pxs = []
+    norm_a = []
+    for col_p, col_a in zip(torch.unbind(p, dim=0), torch.unbind(a, dim=0)):
+        minus_p_plus_x = add(-col_p[None, :], x, c)  # shape=batch, hidden
+        cf_px = conformal_factor(minus_p_plus_x, c)  # shape=batch,1
+        cf_pxs.append(cf_px.squeeze(1))
+        a_norm = torch.norm(col_a)
+        norm_a.append(a_norm)
+        col_a = col_a[None, :]
+        dot_px_a = dot(
+            minus_p_plus_x,
+            col_a / a_norm,
+        )  # shape=batch,1
+        dot_px_as.append(dot_px_a.squeeze(1))
+    cfs = torch.stack(cf_pxs, dim=1)  # shape=batch, num_classes
+    norm_a = torch.stack(norm_a)[None, :]  # shape=1,num_classes
+    dots = torch.stack(dot_px_as, dim=1)  # shape=batch, num_classes
+    sqrt_c = torch.sqrt(c)
+    logits = 2. / sqrt_c * norm_a * asinh(sqrt_c * (dots * cfs))
+    return logits
