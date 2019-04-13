@@ -43,13 +43,13 @@ class Linear(nn.Module):
 
     def get_hyperbolic_params(self):
         """Convenience function to collect params for optmization"""
-        return tuple(self.weight)
+        return [self.weight]
 
     def get_euclidean_params(self):
         if self.bias is None:
-            return tuple()
+            return []
         else:
-            return tuple(self.bias)
+            return [self.bias]
 
 
 class Dense(Linear):
@@ -60,10 +60,10 @@ class Dense(Linear):
                  in_features,
                  out_features,
                  bias=True,
-                 activation=torch.tanh,
+                 activation=m.tanh,
                  c=m.default_c):
         super(Dense, self).__init__(in_features, out_features, bias, c)
-        self.activation = activation
+        self.activation = lambda x: activation(x, c=self.c)
 
     def forward(self, inp):
         after_linear = super().forward(inp)
@@ -118,18 +118,19 @@ class Logits(nn.Module):
 
     def get_hyperbolic_params(self):
         """Convenience function to collect params for optmization"""
-        return tuple(self.p)
+        return [self.p]
 
     def get_euclidean_params(self):
-        return tuple(self.a)
+        return [self.a]
 
 
 class HyperEmbeddings(nn.Embedding):
     def get_hyperbolic_params(self):
-        return tuple(self.weight)
+        wts = self.weight
+        return [wts]
 
     def get_euclidean_params(self):
-        return tuple()
+        return []
 
     @classmethod
     def from_gensim_model(cls,

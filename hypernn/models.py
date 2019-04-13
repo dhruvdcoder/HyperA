@@ -13,13 +13,14 @@ class HyperDeepAvgNet(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_classes = num_classes
         self.c = c
-        self.emb = hnn.HyperEmbeddings.from_gensim_model(gensim_emb)
+        self.emb = hnn.HyperEmbeddings.from_gensim_model(
+            gensim_emb, sparse=False)
         self.dense_premise = hnn.Dense(self.emb_size, hidden_dim, c=c)
         self.dense_hypothesis = hnn.Dense(self.emb_size, hidden_dim, c=c)
         self.dense_combine = hnn.Dense(
             2 * self.hidden_dim, self.hidden_dim, c=c)
         self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
-        self.avg = lambda x: torch.mean(x, dim=-2)
+        self.avg = lambda x: m.mean(x, c, dim=-2)
         self.cat = lambda premise, hypothesis: torch.cat((premise, hypothesis), -1)
 
     def forward(self, inp):
@@ -39,21 +40,26 @@ class HyperDeepAvgNet(nn.Module):
             'params': self.emb.get_hyperbolic_params(),
             'lr': emb_lr
         })
-        bias_params = [
-            layer.get_hyperbolic_params() for layer in [
+        bias_params = []
+        for layer in [
                 self.dense_premise, self.dense_hypothesis, self.dense_combine,
                 self.logits
-            ]
-        ]
+        ]:
+            params = layer.get_hyperbolic_params()
+            bias_params += params
+
         hyp_params.append({'params': bias_params, 'lr': bias_lr})
+        return hyp_params
 
     def get_euclidean_params(self, lr=0.001):
-        params_list = [
-            layer.get_euclidean_params() for layer in [
+        params_list = []
+        for layer in [
                 self.dense_premise, self.dense_hypothesis, self.dense_combine,
                 self.logits
-            ]
-        ]
+        ]:
+            params = layer.get_euclidean_params()
+            params_list += params
+
         euc_params = [{'params': params_list, 'lr': lr}]
         return euc_params
 

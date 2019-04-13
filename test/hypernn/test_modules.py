@@ -75,6 +75,25 @@ def test_Dense():
         test_case()
 
 
+def test_Dense_grad():
+    in_features = 100
+    out_features = 50
+    batch_size = 64
+
+    c_val = 1.
+    c = c_val
+    hnn_dense = hnn.Dense(in_features, out_features, bias=True, c=c).double()
+
+    def test_case():
+        x = torch.tensor(
+            np_utils.random_vec((batch_size, in_features)),
+            requires_grad=True).double()
+        torch.autograd.gradcheck(hnn_dense, x)
+
+    for i in range(1):
+        test_case()
+
+
 def test_Logits_grad():
     emb_size = 100
     K = 5
