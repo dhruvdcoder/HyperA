@@ -75,6 +75,7 @@ class ConcatRNN(nn.Module):
 
         # Stacks the 2 matrices in the timestep dimension (NxWxV - W dimension)
         self.cat = lambda premise, hypothesis: torch.cat((premise, hypothesis), -2)
+        self.rnn = hnn.HyperRNN(self.hidden_dim)
         self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
 
 
@@ -85,8 +86,8 @@ class ConcatRNN(nn.Module):
         premise_emb = self.emb(premise)
         hypothesis_emb = self.emb(hypothesis)
         rolled_vector = self.cat(premise_emb,  hypothesis_emb)
-        rnn = hnn.HyperRNN(self.hidden_dim)
-        output = rnn(rolled_vector)
+        
+        output = self.rnn(rolled_vector)
 
         logits = self.logits(next_h)
         return logits
