@@ -20,7 +20,7 @@ class HyperDeepAvgNet(nn.Module):
         self.dense_combine = hnn.Dense(
             2 * self.hidden_dim, self.hidden_dim, c=c)
         self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
-        self.avg = lambda x: torch.mean(x, dim=-2)
+        self.avg = lambda x: m.mean(x, c, dim=-2)
         self.cat = lambda premise, hypothesis: torch.cat((premise, hypothesis), -1)
 
     def forward(self, inp):
