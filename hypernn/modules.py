@@ -144,7 +144,6 @@ class HyperEmbeddings(nn.Embedding):
 
 class HyperRNNCell(nn.Module):
     """TODO: support num_layers parameter"""
-    def __init__(self, hidden_dim, emb_size, c=m.default_c):
     def __init__(self, input_size, hidden_dim, c=m.default_c):
         super(HyperRNNCell, self).__init__()
         self.input_size = input_size
@@ -183,12 +182,12 @@ class HyperRNNCell(nn.Module):
         return euc_params
 
 class HyperRNN(nn.Module):
-    def __init__(self, hidden_dim, input_dims, c=m.default_c):
+    def __init__(self, input_size, hidden_size, c=m.default_c):
         super(HyperRNN, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.input_dims = input_dims
+        self.hidden_size = hidden_size
+        self.input_size = input_size
         self.c = c
-        self.rnn_cell = HyperRNNCell(self.hidden_dim, input_dims, self.c)
+        self.rnn_cell = HyperRNNCell(self.input_size, self.hidden_size, self.c)
 
     def forward(self, inp):
         x, h0 = inp
