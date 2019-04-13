@@ -47,7 +47,7 @@ class RSGD(torch.optim.Optimizer):
                 # riemannian_grad_rescale_factor() expects a 2D
                 # tensor
                 unsqueezed = False
-                if len(p.shape) < 2:
+                if len(p.shape) < 2:  # for biases
                     if len(p.shape) == 1:
                         reshaped_p = p.detach().unsqueeze(0)
                         unsqueezed = True
@@ -69,6 +69,20 @@ class RSGD(torch.optim.Optimizer):
                 # because embeddings might be sparse matrices
                 # hence only those operators are allowed which
                 # are supported by sparse tensors
+
+                #### following does not work because
+                #### Sparse*Dense does not support
+                #### broadcasting on dense
+                #### https://github.com/pytorch/pytorch/issues/3158
+                #### use the following line if embeddings are not sparse
+                #### If embeddings are sparse, use the code block below
+                #### this line
                 d_p = d_p.mul(squeezed_rescale_factor)
-                p.data.add_(-group['-lr'], d_p)
+                #if len(d_p.shape) == 2:
+                #    d_p = d_p.mul(
+                #       squeezed_rescale_factor.expand(-1, d_p.size(1)))
+                #else:
+                #   d_p = d_p.mul(squeezed_rescale_factor.expand(d_p.size(0)))
+
+                p.data.add_(-group['lr'], d_p)
         return loss
