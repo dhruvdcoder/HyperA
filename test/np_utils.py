@@ -1,16 +1,16 @@
 import numpy as np
 import logging
-import torch
+#import torch
 logger = logging.getLogger(__name__)
 
 ##### Constants ######
 ball_boundary = 1e-5
 perterb = 1e-15
-default_c = torch.Tensor([1.])
+default_c = 1.
 
 
 def random_vec(size, low=-0.01, high=0.01):
-    return np.random.uniform(low=low, high=high, size=size)
+    return np.random.uniform(low=low, high=high, size=size).astype('float64')
 
 
 def dot(x, y):
@@ -62,3 +62,26 @@ def squared_distance(a, b, c=default_c):
     atanh_arg = sqrt_c * norm(diff)
     dist = 2. / sqrt_c * atanh(atanh_arg)
     return dist**2
+
+
+def matmul(M, x, c):
+    """ 
+    out = x M
+    dim(x) = batch, emb
+    dim(M) = emb, output
+    dim(out) = batch, output
+    """
+    x += perterb
+    prod = np.matmul(x, M) + perterb
+    prod_n = norm(prod)
+    x_n = norm(x)
+    sqrt_c = np.sqrt(c)
+    res = 1. / sqrt_c * (
+        np.tanh(prod_n / x_n * atanh(sqrt_c * x_n)) * prod) / prod_n
+    return project_in_ball(res, c)
+
+
+def Linear(x, M, b, c):
+    if len(b.shape) == 1:
+        b = b[None, :]
+    return add(matmul(M, x, c), b, c)
