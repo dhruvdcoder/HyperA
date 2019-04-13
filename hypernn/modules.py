@@ -31,8 +31,11 @@ class Linear(nn.Module):
             nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, inp):
-        return m.add(
-            m.matmul(self.weight, inp, self.c), self.bias.unsqueeze(0), self.c)
+        out = m.matmul(self.weight, inp, self.c)
+        if self.bias is not None:
+            out = m.add(out, self.bias.unsqueeze(0), self.c)
+
+        return out
 
     def extra_repr(self):
         return 'in_features={}, out_features={}, bias={}'.format(
@@ -138,3 +141,67 @@ class HyperEmbeddings(nn.Embedding):
         emb_tensor = torch.tensor(gensim_model.vectors)
         return super(HyperEmbeddings, cls).from_pretrained(
             emb_tensor, freeze=freeze, sparse=sparse)
+
+class HyperRNNCell(nn.Module):
+    """TODO: support num_layers parameter"""
+    def __init__(self, input_size, hidden_dim, c=m.default_c):
+        super(HyperRNNCell, self).__init__()
+        self.input_size = input_size
+        self.hidden_dim = hidden_dim
+        self.l_ih = Linear(input_size, hidden_dim, bias=False)
+        self.l_hh = Linear(hidden_dim, hidden_dim)
+        self.c = c
+
+    def forward(self, inp_tuple):
+        inp, prev_h = inp_tuple
+        # TODO: Bias?
+        # h_next = m.tanh(m.add(self.l_premise_hyp(inp), self.l_hidden(prev_h)), c=self.c)
+        # print (inp.size())
+        prem = self.l_ih(inp)
+        hid = self.l_hh(prev_h)
+        h_next = m.tanh(m.add(prem, hid), c=self.c)
+        return h_next
+    
+    def get_hyperbolic_params(self, bias_lr=0.01):
+        """Get list of hyperbolic params"""
+        hyp_params = []
+        bias_params = []
+        for layer in [self.l_ih, self.l_hh]:
+            params = layer.get_hyperbolic_params()
+            bias_params += params
+        
+        hyp_params.append({'params': bias_params, 'lr': bias_lr})
+        return hyp_params
+
+    def get_euclidean_params(self, lr=0.001):
+        params_list = []
+        for layer in [self.l_ih, self.l_hh]:
+            params = layer.get_euclidean_params()
+            params_list +=params
+        euc_params = [{'params': params_list, 'lr': lr}]
+        return euc_params
+
+class HyperRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, c=m.default_c):
+        super(HyperRNN, self).__init__()
+        self.hidden_size = hidden_size
+        self.input_size = input_size
+        self.c = c
+        self.rnn_cell = HyperRNNCell(self.input_size, self.hidden_size, self.c)
+
+    def forward(self, inp):
+        x, h0 = inp
+        tsteps = x.size(-2)
+        prev_h = h0
+        for t in range(tsteps):
+            inp_cell = inp[:, t, :]
+            prev_h = self.rnn_cell((inp_cell, prev_h))
+        return prev_h
+
+
+    def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
+        """Get list of hyperbolic params"""
+        return self.rnn_cell.get_hyperbolic_params()
+
+    def get_euclidean_params(self, lr=0.001):
+        return self.rnn_cell.get_euclidean_params()

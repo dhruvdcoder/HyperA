@@ -1,12 +1,17 @@
 """ Operations like mobius addition, mobius scalar mul, etc"""
 import torch
 from numpy import sqrt
+import numpy as np
 
 ##### Constants ######
 ball_boundary = 1e-5
 perterb = 1e-15
 default_c = 1.
 
+def set_float(precision):
+    if precision == 32:
+        global default_c
+        default_c = np.float32(default_c)
 
 def dot(x, y, dim=-1):
     """dim(x)=batch, emb"""
