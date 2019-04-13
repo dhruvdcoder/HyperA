@@ -31,8 +31,11 @@ class Linear(nn.Module):
             nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, inp):
-        return m.add(
-            m.matmul(self.weight, inp, self.c), self.bias.unsqueeze(0), self.c)
+        out = m.matmul(self.weight, inp, self.c)
+        if self.bias is not None:
+            out = m.add(out, self.bias.unsqueeze(0), self.c)
+
+        return out
 
     def extra_repr(self):
         return 'in_features={}, out_features={}, bias={}'.format(
@@ -137,3 +140,71 @@ class HyperEmbeddings(nn.Embedding):
         emb_tensor = torch.tensor(gensim_model.vectors)
         return super(HyperEmbeddings, cls).from_pretrained(
             emb_tensor, freeze=freeze, sparse=sparse)
+
+class HyperRNNCell(nn.Module):
+    def __init__(self, hidden_dim, emb_size, c=m.default_c):
+        super(HyperRNNCell, self).__init__()
+        self.l_premise_hypoth = Linear(emb_size, hidden_dim, bias=False)
+        self.l_hidden = Linear(hidden_dim, hidden_dim)
+        self.c = c
+
+    def forward(self, inp_tuple):
+        inp, prev_h = inp_tuple
+        # TODO: Bias?
+        # h_next = m.tanh(m.add(self.l_premise_hyp(inp), self.l_hidden(prev_h)), c=self.c)
+        # print (inp.size())
+        prem = self.l_premise_hypoth(inp)
+        hid = self.l_hidden(prev_h)
+        h_next = m.tanh(m.add(prem, hid), c=self.c)
+        return h_next
+
+
+class HyperRNN(nn.Module):
+    def __init__(self, hidden_dim, input_dims, c=m.default_c):
+        super(HyperRNN, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.input_dims = input_dims
+        self.c = c
+        self.RNNCell = HyperRNNCell(self.hidden_dim, input_dims, self.c)
+
+    def forward(self, inp):
+        # Assert that inp.dimension is of form (NxWxE)
+        # assert (inp)
+
+        h0 = torch.zeros(inp.size()[0], self.hidden_dim).double()
+        tsteps = inp.size()[-2]
+        prev_h = h0
+        for t in range(tsteps):
+            # print ("Executing timestep: ", t)
+            inp_cell = inp[:, t, :]
+            # print (inp_cell.size())
+            next_h = self.RNNCell((inp_cell, prev_h))
+
+        # next_h = self.RNNCell((inp, prev_h))
+        return next_h
+
+
+    def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
+        """Get list of hyperbolic params"""
+        hyp_params = []
+        hyp_params.append({
+            'params': self.emb.get_hyperbolic_params(),
+            'lr': emb_lr
+        })
+        bias_params = [
+            layer.get_hyperbolic_params() for layer in [
+                self.dense_premise, self.dense_hypothesis, self.dense_combine,
+                self.logits
+            ]
+        ]
+        hyp_params.append({'params': bias_params, 'lr': bias_lr})
+
+    def get_euclidean_params(self, lr=0.001):
+        params_list = [
+            layer.get_euclidean_params() for layer in [
+                self.dense_premise, self.dense_hypothesis, self.dense_combine,
+                self.logits
+            ]
+        ]
+        euc_params = [{'params': params_list, 'lr': lr}]
+        return euc_params

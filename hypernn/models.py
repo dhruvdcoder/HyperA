@@ -56,3 +56,31 @@ class HyperDeepAvgNet(nn.Module):
         ]
         euc_params = [{'params': params_list, 'lr': lr}]
         return euc_params
+
+class ConcatRNN(nn.Module):
+    def __init__(self, gensim_emb, hidden_dim, num_classes, c=m.default_c):
+        super(ConcatRNN, self).__init__()
+        self.emb_size = gensim_emb.vector_size
+        self.vocab_size = len(gensim_emb.vocab)
+        self.hidden_dim = hidden_dim
+        self.num_classes = num_classes
+        self.c = c
+        self.emb = hnn.HyperEmbeddings.from_gensim_model(gensim_emb)
+
+        # Stacks the 2 matrices in the timestep dimension (NxWxV - W dimension)
+        self.cat = lambda premise, hypothesis: torch.cat((premise, hypothesis), -2)
+        self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
+
+
+    def forward(self, inp):
+        premise, hypothesis = inp
+
+        # Project to Hyperbolic embedding space
+        premise_emb = self.emb(premise)
+        hypothesis_emb = self.emb(hypothesis)
+        rolled_vector = self.cat(premise_emb,  hypothesis_emb)
+        rnn = hnn.HyperRNN(self.hidden_dim)
+        output = rnn(rolled_vector)
+
+        logits = self.logits(next_h)
+        return logits
