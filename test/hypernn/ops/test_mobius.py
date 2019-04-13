@@ -34,7 +34,8 @@ def test_add_left_cancelation():
     def sample():
         a = torch.Tensor(np_utils.random_vec((batch_size, emb_size)))
         b = torch.Tensor(np_utils.random_vec((batch_size, emb_size)))
-        c = torch.Tensor(np_utils.random_vec((1, ), low=0.0, high=1.))
+        c = np_utils.random_vec([], low=0.0, high=1.)
+        c = float(c)
         logger.debug("c: {}".format(c))
         res = mobius.add(-a, mobius.add(a, b, c), c).data.numpy()
         expected = b.data.numpy()
@@ -54,8 +55,8 @@ def test_distance():
         b = torch.Tensor(bval)
         #cval = np_utils.random_vec((1, ), low=0.0, high=1.)
         # TODO: Why does this fail with random c?
-        cval = np.array([1.])
-        c = torch.Tensor(cval)
+        cval = 1.
+        c = cval
         logger.info("c: {}".format(c))
         res = mobius.squared_distance(a, b, c).data.numpy()
         expected = np_utils.squared_distance(aval, bval, cval)
@@ -73,8 +74,9 @@ def test_logits():
     K = 3
     p_val = np_utils.random_vec((K, emb_size))
     a_val = np_utils.random_vec((K, emb_size))
-    cval = np.array([1.])
-    c = torch.Tensor(cval).double()
+    cval = 1.
+    #c = torch.Tensor(cval).double()
+    c = cval
     p = torch.tensor(p_val).double()
     a = torch.tensor(a_val).double()
     x_val = np_utils.random_vec((batch_size, emb_size))
@@ -84,8 +86,9 @@ def test_logits():
 
 
 def test_linear_grad():
-    cval = np.array([1.])
-    c = torch.Tensor(cval).double()
+    cval = 1.
+    #c = torch.Tensor(cval).double()
+    c = cval
     in_features = 100
     out_features = 50
     batch_size = 64
@@ -114,8 +117,9 @@ def test_logits_grad():
     def test_case():
         p_val = np_utils.random_vec((K, emb_size))
         a_val = np_utils.random_vec((K, emb_size))
-        cval = np.array([1.])
-        c = torch.Tensor(cval).double()
+        cval = 1.
+        #c = torch.Tensor(cval).double()
+        c = cval
         p = torch.tensor(p_val, requires_grad=True).double()
         a = torch.tensor(a_val, requires_grad=True).double()
         x_val = np_utils.random_vec((batch_size, emb_size))

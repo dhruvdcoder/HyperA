@@ -38,6 +38,40 @@ class Linear(nn.Module):
         return 'in_features={}, out_features={}, bias={}'.format(
             self.in_features, self.out_features, self.bias is not None)
 
+    def get_hyperbolic_params(self):
+        """Convenience function to collect params for optmization"""
+        return tuple(self.weight)
+
+    def get_euclidean_params(self):
+        if self.bias is None:
+            return tuple()
+        else:
+            return tuple(self.bias)
+
+
+class Dense(Linear):
+    """Hyperbolic Linear transformation followed by
+    a non-linearity"""
+
+    def __init__(self,
+                 in_features,
+                 out_features,
+                 bias=True,
+                 activation=torch.tanh,
+                 c=m.default_c):
+        super(Dense, self).__init__(in_features, out_features, bias, c)
+        self.activation = activation
+
+    def forward(self, inp):
+        after_linear = super().forward(inp)
+        return self.activation(after_linear)
+
+    def extra_repr(self):
+        return ('in_features={}, out_features={}, bias={},'
+                ' activation={}').format(self.in_features, self.out_features,
+                                         self.bias is not None,
+                                         self.activation)
+
 
 class Logits(nn.Module):
     """Logits in hyperbolic space
@@ -78,3 +112,28 @@ class Logits(nn.Module):
     def extra_repr(self):
         return ('in_features (num_hidden_dim)={}, out_features(num_classes)={}'
                 ).format(self.in_features, self.out_features)
+
+    def get_hyperbolic_params(self):
+        """Convenience function to collect params for optmization"""
+        return tuple(self.p)
+
+    def get_euclidean_params(self):
+        return tuple(self.a)
+
+
+class HyperEmbeddings(nn.Embedding):
+    def get_hyperbolic_params(self):
+        return tuple(self.weight)
+
+    def get_euclidean_params(self):
+        return tuple()
+
+    @classmethod
+    def from_gensim_model(cls,
+                          gensim_model,
+                          freeze=False,
+                          sparse=True,
+                          c=m.default_c):
+        emb_tensor = torch.tensor(gensim_model.vectors)
+        return super(HyperEmbeddings, cls).from_pretrained(
+            emb_tensor, freeze=freeze, sparse=sparse)

@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 ##### Constants ######
 ball_boundary = 1e-5
 perterb = 1e-15
-default_c = np.array([1.])
+default_c = 1.
 
 
 def random_vec(size, low=-0.01, high=0.01):

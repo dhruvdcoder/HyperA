@@ -26,20 +26,29 @@ def get_args():
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
         default='INFO',
         type=lambda s: logging.getLevelName(s))
-    return parser.parse_args()
+    args, _ = parser.parse_known_args()
+    return args
 
 
 cmd_args = get_args()
 
-root_dir = cmd_args.root_dir
+root_dir = Path(__file__).parent.parent
+
+logging_level = cmd_args.logging_level or 'INFO'
 
 logging.basicConfig(
     stream=sys.stdout,
-    level=cmd_args.logging_level,
+    level=logging_level,
     format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
 
 data_dir = root_dir.parent / 'data'
 
-code_dir = root_dir / 'Code'
+code_dir = root_dir / 'hypernn'
+
+test_dir = root_dir / 'test'
 
 report_dir = root_dir / 'report'
+
+emb_dir = root_dir / 'embeddings'
+
+default_poincare_glove = emb_dir / 'poincare' / 'poincare_glove_100D_dist-sq_vocab50k_word2vec.txt'
