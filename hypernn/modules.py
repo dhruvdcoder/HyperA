@@ -57,10 +57,10 @@ class Dense(Linear):
                  in_features,
                  out_features,
                  bias=True,
-                 activation=torch.tanh,
+                 activation=m.tanh,
                  c=m.default_c):
         super(Dense, self).__init__(in_features, out_features, bias, c)
-        self.activation = activation
+        self.activation = lambda x: activation(x, c=self.c)
 
     def forward(self, inp):
         after_linear = super().forward(inp)

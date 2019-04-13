@@ -252,7 +252,7 @@ def relu(x, c):
 
 
 def tanh(x, c):
-    return activation(x, torch.nn.functional.tanh, c)
+    return activation(x, torch.tanh, c)
 
 
 def rnn_step(x, h_prev, w_h, w_x, b, c):
