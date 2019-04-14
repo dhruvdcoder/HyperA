@@ -87,8 +87,10 @@ class ConcatRNN(nn.Module):
         premise_emb = self.emb(premise)
         hypothesis_emb = self.emb(hypothesis)
         rolled_vector = self.cat(premise_emb, hypothesis_emb)
-        h0 = torch.zeros(rolled_vector.size(0), self.hidden_dim)
+        #h0 = torch.zeros(rolled_vector.size(0), self.hidden_dim).double()
+        h0 = torch.zeros(rolled_vector.size(0), self.hidden_dim).double()
         output = self.rnn((rolled_vector, h0))
+        #output = self.rnn(rolled_vector)
         logits = self.logits(output)
         return logits
 

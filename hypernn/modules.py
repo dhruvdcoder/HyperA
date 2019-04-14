@@ -190,6 +190,8 @@ class HyperRNN(nn.Module):
 
     def forward(self, inp):
         x, h0 = inp
+        #x = inp
+        #h0 = torch.zeros(x.size(0), self.hidden_size).double()
         tsteps = x.size(-2)
         prev_h = h0
         for t in range(tsteps):

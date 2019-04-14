@@ -2,7 +2,8 @@
 import torch
 from numpy import sqrt
 import numpy as np
-
+import logging
+logger = logging.getLogger(__name__)
 ##### Constants ######
 ball_boundary = 1e-5
 perterb = 1e-15
@@ -45,6 +46,8 @@ def project_in_ball(x, c, dim=-1):
     normx = norm(x, dim=dim)
     radius = (1. - ball_boundary) / sqrt(c)
     project = x / normx * radius
+    if bool(torch.isnan(project).any()):
+        logger.debug("rad={}\nx={}\nnormx={}".format(radius, x, normx))
     r = torch.where(normx >= radius, project, x)
     return r
 

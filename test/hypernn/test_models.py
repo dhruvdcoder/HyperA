@@ -5,6 +5,7 @@ import hypernn.models as hmodels
 from data.dummy import random_data_generator
 from hypernn.training import train, default_params
 import torch
+from torch.autograd import detect_anomaly
 
 
 def test_creation_HyperDeepAvgNet():
@@ -41,7 +42,7 @@ def test_training_ConcatRNN():
     num_batches = 10
     seq_len = 2
     vocab_size = len(hyp_emb_model.vocab)
-    model = hmodels.ConcatRNN(hyp_emb_model, hidden_dim, 3, c=1e-20)
+    model = hmodels.ConcatRNN(hyp_emb_model, hidden_dim, 3, c=1e-20).double()
 
     train(model,
           random_data_generator(batch_size, seq_len, num_classes, num_batches),
@@ -50,4 +51,5 @@ def test_training_ConcatRNN():
 
 if __name__ == '__main__':
     #test_training_HyperDeepAvgNet()
-    test_training_ConcatRNN()
+    with detect_anomaly():
+        test_training_ConcatRNN()
