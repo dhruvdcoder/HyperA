@@ -72,6 +72,11 @@ def get_args():
     parser.add_argument('--device', choices=['cpu', 'gpu'], default='cpu')
     parser.add_argument(
         '--gpu', default=0, type=int, help="Used only if device is gpu")
+    parser.add_argument(
+        '--dtype',
+        default='double',
+        choices=['double', 'float'],
+        help='double or float')
     args, _ = parser.parse_known_args()
     return args
 
@@ -131,3 +136,8 @@ if cmd_args.device == 'cpu':
     device = torch.device('cpu')
 else:
     device = torch.device('cuda:{}'.format(cmd_args.gpu))
+
+if cmd_args.dtype == 'double':
+    dtype = torch.float64
+else:
+    dtype = torch.float32

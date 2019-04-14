@@ -52,7 +52,7 @@ class Linear(nn.Module):
             return [self.bias]
 
 
-activations_dict = {'tanh': m.tanh, 'relu': m.relu}
+activations_dict = {'tanh': m.tanh, 'relu': m.relu, 'id': m.id}
 
 
 class Dense(Linear):
@@ -63,7 +63,7 @@ class Dense(Linear):
                  in_features,
                  out_features,
                  bias=True,
-                 activation='tanh',
+                 activation='id',
                  c=m.default_c):
         super(Dense, self).__init__(in_features, out_features, bias, c)
         self.activation = activation
