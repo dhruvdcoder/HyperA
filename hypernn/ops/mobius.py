@@ -135,8 +135,6 @@ def matmul(M, x, c, dim=-1):
     dim(M) = emb, output
     dim(out) = batch, output
     """
-    if len(x.shape) > 2:
-        raise ValueError("Mobius matmul cannot handle more that 2D array")
     x = x + perterb
     prod = torch.matmul(x, M) + perterb
     prod_n = norm(prod, dim=dim)

@@ -52,6 +52,9 @@ class Linear(nn.Module):
             return [self.bias]
 
 
+activations_dict = {'tanh': m.tanh, 'relu': m.relu}
+
+
 class Dense(Linear):
     """Hyperbolic Linear transformation followed by
     a non-linearity"""
@@ -60,14 +63,15 @@ class Dense(Linear):
                  in_features,
                  out_features,
                  bias=True,
-                 activation=m.tanh,
+                 activation='tanh',
                  c=m.default_c):
         super(Dense, self).__init__(in_features, out_features, bias, c)
-        self.activation = lambda x: activation(x, c=self.c)
+        self.activation = activation
 
     def forward(self, inp):
         after_linear = super().forward(inp)
-        return self.activation(after_linear)
+        res = activations_dict[self.activation](after_linear, self.c)
+        return res
 
     def extra_repr(self):
         return ('in_features={}, out_features={}, bias={},'
@@ -133,14 +137,20 @@ class HyperEmbeddings(nn.Embedding):
         return []
 
     @classmethod
-    def from_gensim_model(cls,
-                          gensim_model,
-                          freeze=False,
-                          sparse=True,
-                          c=m.default_c):
+    def from_gensim_model(cls, gensim_model, c, freeze=False, sparse=False):
         emb_tensor = torch.tensor(gensim_model.vectors)
         return super(HyperEmbeddings, cls).from_pretrained(
             emb_tensor, freeze=freeze, sparse=sparse)
+
+    @classmethod
+    def from_vectors(cls, vectors, c, freeze=False, sparse=False):
+        return super(HyperEmbeddings, cls).from_pretrained(
+            vectors, freeze=freeze, sparse=sparse)
+
+    @classmethod
+    def from_torchtext_vocab(cls, vocab, c, freeze=False, sparse=False):
+        return super(HyperEmbeddings, cls).from_pretrained(
+            vocab.vectors, freeze=freeze, sparse=sparse)
 
 
 class HyperRNNCell(nn.Module):
