@@ -3,33 +3,33 @@ import torch
 import torch.nn as nn
 import hypernn.modules as hnn
 import hypernn.ops.mobius as m
+default_c = m.default_c
 
 
 class HyperDeepAvgNet(nn.Module):
-    def __init__(self, gensim_emb, hidden_dim, num_classes, c):
+    def __init__(self, torchtext_vocab, hidden_dim, num_classes, c):
         super(HyperDeepAvgNet, self).__init__()
-        self.emb_size = gensim_emb.vector_size
-        self.vocab_size = len(gensim_emb.vocab)
+        self.emb_size = torchtext_vocab.vectors.size(1)
+        self.vocab_size = len(torchtext_vocab)
         self.hidden_dim = hidden_dim
         self.num_classes = num_classes
         self.c = c
-        self.emb = hnn.HyperEmbeddings.from_gensim_model(
-            gensim_emb, sparse=False)
+        self.emb = hnn.HyperEmbeddings.from_torchtext_vocab(
+            torchtext_vocab, self.c, sparse=False)
         self.dense_premise = hnn.Dense(self.emb_size, hidden_dim, c=c)
         self.dense_hypothesis = hnn.Dense(self.emb_size, hidden_dim, c=c)
         self.dense_combine = hnn.Dense(
             2 * self.hidden_dim, self.hidden_dim, c=c)
         self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
-        self.avg = lambda x: m.mean(x, c, dim=-2)
-        self.cat = lambda premise, hypothesis: torch.cat((premise, hypothesis), -1)
 
     def forward(self, inp):
         premise, hypothesis = inp
         premise_emb = self.emb(premise)
         hypothesis_emb = self.emb(hypothesis)
-        premise_rep = self.dense_premise(self.avg(premise_emb))
-        hypothesis_rep = self.dense_hypothesis(self.avg(hypothesis_emb))
-        concat_rep = self.cat(premise_rep, hypothesis_rep)
+        premise_rep = self.dense_premise(m.mean(premise_emb, self.c, dim=-2))
+        hypothesis_rep = self.dense_hypothesis(
+            m.mean(hypothesis_emb, self.c, dim=-2))
+        concat_rep = torch.cat((premise_rep, hypothesis_rep), -1)
         logits = self.logits(self.dense_combine(concat_rep))
         return logits
 
