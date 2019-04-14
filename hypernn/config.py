@@ -34,7 +34,8 @@ cmd_args = get_args()
 
 root_dir = Path(__file__).parent.parent
 
-logging_level = cmd_args.logging_level or 'INFO'
+#logging_level = cmd_args.logging_level or 'DEBUG'
+logging_level = 'DEBUG'
 
 logging.basicConfig(
     stream=sys.stdout,

@@ -1,9 +1,11 @@
 import pytest
 import hypernn.modules as hnn
+import hypernn.ops.mobius as m
 import test.np_utils as np_utils
 import torch
 import numpy as np
 import logging
+from torch.autograd import detect_anomaly
 logger = logging.getLogger(__name__)
 
 
@@ -45,7 +47,7 @@ def test_Linear_grad():
             requires_grad=True).double()
         torch.autograd.gradcheck(hnn_linear, x)
 
-    for i in range(10):
+    for i in range(1):
         test_case()
 
 
@@ -70,7 +72,7 @@ def test_Dense():
         res_act_linear = torch.tanh(hnn_linear(x)).data.numpy()
         assert np.allclose(res_dense, res_act_linear)
 
-    for i in range(10):
+    for i in range(1):
         test_case()
 
 
@@ -112,6 +114,49 @@ def test_Logits_grad():
         test_case()
 
 
+def test_Dense_grad():
+    in_features = 100
+    out_features = 50
+    batch_size = 64
+
+    c_val = 1.
+    c = c_val
+    hnn_linear = hnn.Dense(in_features, out_features, bias=True, c=c).double()
+
+    def test_case():
+        x = torch.tensor(
+            np_utils.random_vec((batch_size, in_features)),
+            requires_grad=True).double()
+        torch.autograd.gradcheck(hnn_linear, x)
+
+    for i in range(1):
+        test_case()
+
+
+def test_RNN_grad():
+    hidden_size = 100
+    emb_size = 100
+    batch_size = 2
+    timesteps = 3
+
+    hnn_rnn = hnn.HyperRNN(emb_size, hidden_size).double()
+
+    def test_case():
+        x = torch.tensor(
+            np_utils.random_vec((batch_size, timesteps, emb_size)),
+            requires_grad=True).double()
+        h0 = torch.zeros(x.size(0), hidden_size)
+        torch.autograd.gradcheck(hnn_rnn, x)
+
+    for i in range(1):
+        test_case()
+
+
 if __name__ == '__main__':
     #test_Linear_forward()
-    test_Dense_grad()
+    # test_Dense()
+    # m.set_float(32)
+    with detect_anomaly():
+        test_RNN_grad()
+    # test_Linear_grad()
+    # test_Dense_grad()
