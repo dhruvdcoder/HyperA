@@ -142,8 +142,10 @@ class HyperEmbeddings(nn.Embedding):
         return super(HyperEmbeddings, cls).from_pretrained(
             emb_tensor, freeze=freeze, sparse=sparse)
 
+
 class HyperRNNCell(nn.Module):
     """TODO: support num_layers parameter"""
+
     def __init__(self, input_size, hidden_dim, c=m.default_c):
         super(HyperRNNCell, self).__init__()
         self.input_size = input_size
@@ -159,27 +161,24 @@ class HyperRNNCell(nn.Module):
         # print (inp.size())
         prem = self.l_ih(inp)
         hid = self.l_hh(prev_h)
-        h_next = m.tanh(m.add(prem, hid), c=self.c)
+        h_next = m.tanh(m.add(prem, hid, self.c), c=self.c)
         return h_next
-    
+
     def get_hyperbolic_params(self, bias_lr=0.01):
         """Get list of hyperbolic params"""
-        hyp_params = []
         bias_params = []
         for layer in [self.l_ih, self.l_hh]:
             params = layer.get_hyperbolic_params()
             bias_params += params
-        
-        hyp_params.append({'params': bias_params, 'lr': bias_lr})
-        return hyp_params
+        return bias_params
 
     def get_euclidean_params(self, lr=0.001):
         params_list = []
         for layer in [self.l_ih, self.l_hh]:
             params = layer.get_euclidean_params()
-            params_list +=params
-        euc_params = [{'params': params_list, 'lr': lr}]
-        return euc_params
+            params_list += params
+        return params_list
+
 
 class HyperRNN(nn.Module):
     def __init__(self, input_size, hidden_size, c=m.default_c):
@@ -194,10 +193,9 @@ class HyperRNN(nn.Module):
         tsteps = x.size(-2)
         prev_h = h0
         for t in range(tsteps):
-            inp_cell = inp[:, t, :]
+            inp_cell = x[:, t, :]
             prev_h = self.rnn_cell((inp_cell, prev_h))
         return prev_h
-
 
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
         """Get list of hyperbolic params"""

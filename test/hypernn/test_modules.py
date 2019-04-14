@@ -138,13 +138,14 @@ def test_RNN_grad():
     batch_size = 2
     timesteps = 3
 
-    hnn_rnn = hnn.HyperRNN(hidden_size, emb_size).double()
+    hnn_rnn = hnn.HyperRNN(emb_size, hidden_size).double()
 
     def test_case():
         x = torch.tensor(
             np_utils.random_vec((batch_size, timesteps, emb_size)),
             requires_grad=True).double()
-        torch.autograd.gradcheck(hnn_rnn, x)
+        h0 = torch.zeros(x.size(0), hidden_size)
+        torch.autograd.gradcheck(hnn_rnn, ((x, h0), ))
 
     for i in range(1):
         test_case()

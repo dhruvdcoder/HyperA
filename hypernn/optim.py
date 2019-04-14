@@ -1,6 +1,9 @@
 """ Contains RSGD optmizer"""
 import torch
 from hypernn.ops import mobius as m
+from hypernn import config as config
+import logging
+logger = logging.getLogger(__name__)
 
 
 def riemannian_grad_rescale_factor(u, c):
@@ -34,16 +37,21 @@ class RSGD(torch.optim.Optimizer):
         loss = None
         if closure is not None:
             loss = closure()
-
+        group_no = 0
         for group in self.param_groups:
+            logger.debug("Group num={}".format(group_no))
             # no momentum
+            param_num = 0
             for p in group['params']:
+                logger.debug("param_num={}".format(param_num))
+                logger.debug("shape={}".format(p.shape))
                 if p.grad is None:
                     continue  # first step
                 # p can be the various biases or the hyperbolic word
                 # embeddings hence can have shape (hidden_dim,)
                 # or (num_embeddings, emb_size)
                 d_p = p.grad.data  # detach from comp graph
+                logger.debug("E grad={}".format(d_p))
                 # riemannian_grad_rescale_factor() expects a 2D
                 # tensor
                 unsqueezed = False
@@ -78,6 +86,7 @@ class RSGD(torch.optim.Optimizer):
                 #### If embeddings are sparse, use the code block below
                 #### this line
                 d_p = d_p.mul(squeezed_rescale_factor)
+                logger.debug("H grad={}".format(d_p))
                 #if len(d_p.shape) == 2:
                 #    d_p = d_p.mul(
                 #       squeezed_rescale_factor.expand(-1, d_p.size(1)))
@@ -85,4 +94,6 @@ class RSGD(torch.optim.Optimizer):
                 #   d_p = d_p.mul(squeezed_rescale_factor.expand(d_p.size(0)))
 
                 p.data.add_(-group['lr'], d_p)
+                param_num += 1
+            group_no += 1
         return loss

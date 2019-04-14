@@ -8,10 +8,12 @@ ball_boundary = 1e-5
 perterb = 1e-15
 default_c = 1.
 
+
 def set_float(precision):
     if precision == 32:
         global default_c
         default_c = np.float32(default_c)
+
 
 def dot(x, y, dim=-1):
     """dim(x)=batch, emb"""
@@ -37,7 +39,7 @@ def asinh(x):
     return torch.log(x + (x**2 + 1)**0.5)
 
 
-def project_in_ball(x, c=default_c, dim=-1):
+def project_in_ball(x, c, dim=-1):
     """dim(x) = batch, *, *,emb"""
     # https://discuss.pytorch.org/t/how-to-use-condition-flow/644/4
     normx = norm(x, dim=dim)
@@ -47,7 +49,7 @@ def project_in_ball(x, c=default_c, dim=-1):
     return r
 
 
-def add(a, b, c=default_c, dim=-1):
+def add(a, b, c, dim=-1):
     """Mobius a+b. dim(a)=dim(b)=batch,**,emb"""
     b = b + perterb
     norm_sq_a = c * norm_sq(a, dim=dim)
@@ -60,7 +62,7 @@ def add(a, b, c=default_c, dim=-1):
     return project_in_ball(res, c=c, dim=dim)
 
 
-def squared_distance(a, b, c=default_c, dim=-1):
+def squared_distance(a, b, c, dim=-1):
     """dim(a)=dim(b)=batch, **,emb
     dim(output)=batch,1"""
     sqrt_c = sqrt(c)
@@ -70,17 +72,17 @@ def squared_distance(a, b, c=default_c, dim=-1):
     return dist**2
 
 
-def scalar_mul(r, a, c=default_c, dim=-1):
+def scalar_mul(r, a, c, dim=-1):
     """dim(r) =(1,), dim(a)=batch, emb"""
     a = a + perterb
     norm_a = norm(a, dim=dim)
     sqrt_c = sqrt(c)
     numerator = torch.tanh(r * atanh(sqrt_c * norm_a))
     res = numerator / (sqrt_c * norm_a) * a
-    return project_in_ball(res, dim=dim)
+    return project_in_ball(res, c, dim=dim)
 
 
-def conformal_factor(x, c=default_c, dim=-1):
+def conformal_factor(x, c, dim=-1):
     """dim(x) = batch, **,emb"""
     return 2. / (1. - c * dot(x, x, dim=dim))
 
