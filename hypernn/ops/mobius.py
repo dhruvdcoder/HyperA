@@ -263,6 +263,10 @@ def tanh(x, c):
     return activation(x, torch.tanh, c)
 
 
+def id(x, c):
+    return x
+
+
 def rnn_step(x, h_prev, w_h, w_x, b, c):
     """
     Arguments:

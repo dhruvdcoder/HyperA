@@ -56,6 +56,9 @@ def train_main(model,
     euc_param_groups = model.get_euclidean_params(lr=optim_params['lr'])
     eu_optim = torch.optim.Adam(euc_param_groups)
     hyp_optim = RSGD(hyp_param_gropus, model.c)
+    logger.info('Setting up optimizers {} and {} with params {}'.format(
+        eu_optim.__class__.__name__, hyp_optim.__class__.__name__,
+        optim_params))
     iterations = 0
     start = time.time()
     best_dev_acc = -1
@@ -71,8 +74,11 @@ def train_main(model,
             iterations += 1
             logits = model.forward((batch.premise, batch.hypothesis))
             loss = loss_op(logits, batch.label)
-            answer = np.argmax(logits.detach().numpy(), 1)  # shape = (batch,)
-            n_correct += np.sum(answer == batch.label.detach().numpy())
+            #answer = np.argmax(logits.detach().numpy(), 1)  # shape = (batch,)
+            with torch.no_grad():
+                answer = torch.max(logits, 1)[1]
+                #n_correct += np.sum(answer == batch.label.detach().numpy())
+                n_correct += (answer == batch.label).sum().item()
             n_total += batch.batch_size
             train_acc = 100. * n_correct / n_total
             loss.backward()
@@ -85,11 +91,12 @@ def train_main(model,
                 logger.info(
                     config.train_log_template.format(
                         time.time() - start, epoch, num_epochs, iterations,
-                        loss, train_acc))
+                        loss.item(), train_acc))
             # checkpoint model periodically
             if iterations % save_every == 0:
                 snapshot_path = save_dir / 'snapshot_acc_{:.4f}_loss_{:.6f}_iter_{}_model_{}.pt'.format(
-                    train_acc, loss, iterations, model.__class__.__name__)
+                    train_acc, loss.item(), iterations,
+                    model.__class__.__name__)
                 logger.info('Saving periodic snap to {}'.format(snapshot_path))
                 torch.save(model, snapshot_path)
                 # remove old snaps
@@ -107,10 +114,13 @@ def train_main(model,
                     for dev_batch_idx, dev_batch in enumerate(dev_itr):
                         logits = model((dev_batch.premise,
                                         dev_batch.hypothesis))
-                        answer = np.argmax(logits.detach().numpy(),
-                                           1)  # shape = (batch,)
-                        n_dev_correct += np.sum(
-                            answer == dev_batch.label.detach().numpy())
+                        #answer = np.argmax(logits.detach().numpy(),
+                        #                  1)  # shape = (batch,)
+                        answer = torch.max(logits, 1)[1]
+                        #n_dev_correct += np.sum(
+                        #    answer == dev_batch.label.detach().numpy())
+                        n_dev_correct += (
+                            answer == dev_batch.label).sum().item()
                         n_dev_total += dev_batch.batch_size
                         dev_loss = loss_op(logits, dev_batch.label)
                     dev_acc = 100. * n_dev_correct / n_dev_total
@@ -120,7 +130,7 @@ def train_main(model,
                         time.time() - start, epoch, num_epochs, iterations,
                         1 + batch_idx, len(train_itr),
                         100. * (1 + batch_idx) / len(train_itr), loss,
-                        dev_loss, train_acc, dev_acc))
+                        dev_loss.item(), train_acc, dev_acc))
 
                 # update best valiation set accuracy
                 if dev_acc > best_dev_acc:

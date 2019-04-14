@@ -1,4 +1,4 @@
-from hypernn.models import HyperDeepAvgNet
+from hypernn.models import ConcatRNN
 from data.loader import prepare_multiNLI
 from hypernn.training import train_main, default_params
 import hypernn.embeddings as embs
@@ -53,8 +53,8 @@ if __name__ == '__main__':
     else:
         logger.info('Creating new model for training')
         logger.info('hidden_dim={}'.format(args.hidden_dim))
-        model = HyperDeepAvgNet(inputs.vocab, args.hidden_dim, 3,
-                                hmodels.default_c).to(config.dtype)
+        model = ConcatRNN(inputs.vocab, args.hidden_dim, 3,
+                          hmodels.default_c).to(config.dtype)
         model.to(config.device)
     train_main(
         model,
