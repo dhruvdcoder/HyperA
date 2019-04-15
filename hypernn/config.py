@@ -52,6 +52,8 @@ def get_args():
         '--vector_cache',
         type=Path,
         help='filename for saving word embeddings cache')
+    parser.add_argument('--use_pretrained', default=True, action='store_true')
+    parser.add_argument('--freeze_emb', default=False, action='store_true')
     parser.add_argument(
         '--resume_snapshot',
         type=Path,

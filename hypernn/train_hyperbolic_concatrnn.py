@@ -42,7 +42,8 @@ if __name__ == '__main__':
         embs_file=config.default_poincare_glove,
         max_seq_len=config.cmd_args.max_seq_len,
         batch_size=128,
-        device=config.device)
+        device=config.device,
+        use_pretrained=config.cmd_args.use_pretrained)
     logger.info('Loaded data and embs')
     if config.cmd_args.resume_snapshot is not None:
         logger.info('Resuming training using model from {}'.format(
@@ -52,9 +53,14 @@ if __name__ == '__main__':
             map_location=config.device).to(config.dtype)
     else:
         logger.info('Creating new model for training')
-        logger.info('hidden_dim={}'.format(args.hidden_dim))
-        model = ConcatRNN(inputs.vocab, args.hidden_dim, 3,
-                          hmodels.default_c).to(config.dtype)
+        logger.info('hidden_dim={}, freeze_emb={}'.format(
+            args.hidden_dim, config.cmd_args.freeze_emb))
+        model = ConcatRNN(
+            inputs.vocab,
+            args.hidden_dim,
+            3,
+            hmodels.default_c,
+            freeze_emb=config.cmd_args.freeze_emb).to(config.dtype)
         model.to(config.device)
     train_main(
         model,

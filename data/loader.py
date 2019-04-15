@@ -12,7 +12,8 @@ def prepare_multiNLI(return_test_set=False,
                      max_seq_len=config.cmd_args.max_seq_len,
                      batch_size=128,
                      device=torch.device('cpu'),
-                     emb_cache_file=config.cmd_args.vector_cache):
+                     emb_cache_file=config.cmd_args.vector_cache,
+                     use_pretrained=config.cmd_args.use_pretrained):
     logger.info('Loading MultiNLI data')
     logger.info('Using max_seq_len ={}'.format(max_seq_len))
     logger.info('Batch_size: {}'.format(batch_size))
@@ -36,25 +37,30 @@ def prepare_multiNLI(return_test_set=False,
     answers.build_vocab(train)
     # load pretrained embs
     logger.info('Loading pretrained embs')
-    if emb_cache_file is not None:  # specified through cmd
-        if emb_cache_file.is_file():
-            logger.info('Loading embs from {}'.format(emb_cache_file))
-            inputs.vocab.vectors = torch.load(emb_cache_file)
+    if use_pretrained:
+        if emb_cache_file is not None:  # specified through cmd
+            if emb_cache_file.is_file():
+                logger.info('Loading embs from {}'.format(emb_cache_file))
+                inputs.vocab.vectors = torch.load(emb_cache_file)
+        else:
+            # cache not specified through cmd
+            # try loading from default cache
+            # useful when resuming training
+            if config.emb_cache_file.is_file():
+                logger.info('Loading embs from {}'.format(
+                    config.emb_cache_file))
+                inputs.vocab.vectors = torch.load(config.emb_cache_file)
+            else:  # load pretrained emb from main emb file
+                logger.info('Loading embs from {}'.format(embs_file))
+                vectors = torchtext.vocab.Vectors(embs_file)
+                inputs.vocab.set_vectors(vectors.stoi, vectors.vectors,
+                                         vectors.dim)
+                # save to default cache
+                logger.info('Saving emb cache to {}'.format(
+                    config.emb_cache_file))
+                torch.save(inputs.vocab.vectors, config.emb_cache_file)
     else:
-        # cache not specified through cmd
-        # try loading from default cache
-        # useful when resuming training
-        if config.emb_cache_file.is_file():
-            logger.info('Loading embs from {}'.format(config.emb_cache_file))
-            inputs.vocab.vectors = torch.load(config.emb_cache_file)
-        else:  # load pretrained emb from main emb file
-            logger.info('Loading embs from {}'.format(embs_file))
-            vectors = torchtext.vocab.Vectors(embs_file)
-            inputs.vocab.set_vectors(vectors.stoi, vectors.vectors,
-                                     vectors.dim)
-            # save to default cache
-            logger.info('Saving emb cache to {}'.format(config.emb_cache_file))
-            torch.save(inputs.vocab.vectors, config.emb_cache_file)
+        pass
 
     if not return_test_set:
         test = None
