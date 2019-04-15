@@ -7,15 +7,21 @@ default_c = m.default_c
 
 
 class HyperDeepAvgNet(nn.Module):
-    def __init__(self, torchtext_vocab, hidden_dim, num_classes, c):
+    def __init__(self,
+                 torchtext_vocab,
+                 hidden_dim,
+                 num_classes,
+                 c,
+                 freeze_emb=True):
         super(HyperDeepAvgNet, self).__init__()
         self.emb_size = torchtext_vocab.vectors.size(1)
         self.vocab_size = len(torchtext_vocab)
         self.hidden_dim = hidden_dim
         self.num_classes = num_classes
         self.c = c
+        self.freeze_emb = freeze_emb
         self.emb = hnn.HyperEmbeddings.from_torchtext_vocab(
-            torchtext_vocab, self.c, sparse=False)
+            torchtext_vocab, self.c, sparse=False, freeze=freeze_emb)
         self.dense_premise = hnn.Dense(self.emb_size, hidden_dim, c=c)
         self.dense_hypothesis = hnn.Dense(self.emb_size, hidden_dim, c=c)
         self.dense_combine = hnn.Dense(
@@ -36,10 +42,11 @@ class HyperDeepAvgNet(nn.Module):
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
         """Get list of hyperbolic params"""
         hyp_params = []
-        hyp_params.append({
-            'params': self.emb.get_hyperbolic_params(),
-            'lr': emb_lr
-        })
+        if self.emb.weight.requires_grad:
+            hyp_params.append({
+                'params': self.emb.get_hyperbolic_params(),
+                'lr': emb_lr
+            })
         bias_params = []
         for layer in [
                 self.dense_premise, self.dense_hypothesis, self.dense_combine,
@@ -65,15 +72,21 @@ class HyperDeepAvgNet(nn.Module):
 
 
 class ConcatRNN(nn.Module):
-    def __init__(self, torchtext_vocab, hidden_dim, num_classes, c):
+    def __init__(self,
+                 torchtext_vocab,
+                 hidden_dim,
+                 num_classes,
+                 c,
+                 freeze_emb=False):
         super(ConcatRNN, self).__init__()
         self.emb_size = torchtext_vocab.vectors.size(1)
         self.vocab_size = len(torchtext_vocab)
         self.hidden_dim = hidden_dim
         self.num_classes = num_classes
+        self.freeze_emb = freeze_emb
         self.c = c
         self.emb = hnn.HyperEmbeddings.from_torchtext_vocab(
-            torchtext_vocab, self.c, sparse=False)
+            torchtext_vocab, self.c, sparse=False, freeze=self.freeze_emb)
 
         # Stacks the 2 matrices in the timestep dimension (NxWxV - W dimension)
         self.rnn = hnn.HyperRNN(self.emb_size, self.hidden_dim)
@@ -107,10 +120,11 @@ class ConcatRNN(nn.Module):
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
         """Get list of hyperbolic params"""
         hyp_params = []
-        hyp_params.append({
-            'params': self.emb.get_hyperbolic_params(),
-            'lr': emb_lr
-        })
+        if self.emb.weight.requires_grad:
+            hyp_params.append({
+                'params': self.emb.get_hyperbolic_params(),
+                'lr': emb_lr
+            })
         bias_params = []
         for layer in [self.rnn, self.logits]:
             params = layer.get_hyperbolic_params()
