@@ -100,7 +100,7 @@ def exp_map(x, v, c, dim=-1):
     sqrt_c = sqrt(c)
     displacement_vector = torch.tanh(sqrt_c * conformal_factor(x, c, dim=dim) *
                                      norm_v / 2.) / (sqrt_c * norm_v) * v
-    return add(x, displacement_vector, dim=dim)
+    return add(x, displacement_vector, c, dim=dim)
 
 
 def log_map(x, y, c, dim=-1):
