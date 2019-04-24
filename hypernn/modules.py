@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import hypernn.ops.mobius as m
 import math
+from logger import TensorboardLoggingMixin
 
 
 class Linear(nn.Module):

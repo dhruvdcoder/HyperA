@@ -7,6 +7,9 @@ from pathlib import Path
 import argparse
 import logging
 import sys
+from datetime import datetime
+
+root_dir = Path(__file__).parent.parent
 
 
 def get_args():
@@ -79,18 +82,46 @@ def get_args():
         default='double',
         choices=['double', 'float'],
         help='double or float')
+    parser.add_argument(
+        '--mainlogdir',
+        required=True,
+        type=Path,
+        default=(root_dir / 'logs'),
+        help='Top level log dir. Logs for individual experiments are'
+        ' subdirectories in this dir. (default: root_dir/logs)')
+    parser.add_argument(
+        '--experiment',
+        default='default_experiment',
+        help='name of the experiment. Use to create the logdir as'
+        ' mainlogdir/experiment/')
+    parser.add_argument(
+        '--tb_debug',
+        action='store_true',
+        default=False,
+        help='Debug using tensorboard')
     args, _ = parser.parse_known_args()
     return args
 
 
 cmd_args = get_args()
 
-root_dir = Path(__file__).parent.parent
-
+# setup experiments logdir
+experiment_dir = cmd_args.mainlogdir / '_'.join(
+    [cmd_args.experiment,
+     datetime.now().strftime('%Y-%m-%dT%H-%M-%S')])
+experiment_dir.mkdir(parents=True, exist_ok=True)
+# setup root logger
+file_log_handler = logging.FileHandler(experiment_dir / "run.log")
+console_log_handler = logging.StreamHandler(sys.stdout)
 logging.basicConfig(
-    stream=sys.stdout,
+    #stream=sys.stdout,
+    handlers=[file_log_handler, console_log_handler],
     level=cmd_args.logging_level,
     format="[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
+logger = logging.getLogger()
+
+logger.info("Saving a copy of console log to {}".format(
+    experiment_dir / "run.log"))
 
 data_dir = root_dir / 'data'
 
