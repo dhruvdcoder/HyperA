@@ -117,6 +117,8 @@ def train_main(model,
                         loss.item(), train_acc))
                 # print the tensorboard
                 tb_logger.tb_logger.add_scalar('loss', loss.item(), iterations)
+                tb_logger.tb_logger.add_scalar('train_acc', train_acc,
+                                               iterations)
             # checkpoint model periodically
             if iterations % save_every == 0:
                 snapshot_path = save_dir / 'snapshot_acc_{:.4f}_loss_{:.6f}_iter_{}_model_{}.pt'.format(
@@ -156,7 +158,7 @@ def train_main(model,
                         1 + batch_idx, len(train_itr),
                         100. * (1 + batch_idx) / len(train_itr), loss,
                         dev_loss.item(), train_acc, dev_acc))
-
+                tb_logger.tb_logger.add_scalar('dev_acc', dev_acc, iterations)
                 # update best valiation set accuracy
                 if dev_acc > best_dev_acc:
 
