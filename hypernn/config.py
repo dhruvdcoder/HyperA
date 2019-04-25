@@ -95,9 +95,14 @@ def get_args():
         help='name of the experiment. Use to create the logdir as'
         ' mainlogdir/experiment/')
     parser.add_argument(
+        '--experiment_dir',
+        type=Path,
+        help='if this is passed, --mainlogdir and --experiment '
+        'are ignored')
+    parser.add_argument(
         '--tb_debug',
         action='store_true',
-        default=False,
+        default=True,
         help='Debug using tensorboard')
     args, _ = parser.parse_known_args()
     return args
@@ -105,11 +110,21 @@ def get_args():
 
 cmd_args = get_args()
 
+
 # setup experiments logdir
-experiment_dir = cmd_args.mainlogdir / '_'.join(
-    [cmd_args.experiment,
-     datetime.now().strftime('%Y-%m-%dT%H-%M-%S')])
+def get_exp_dir(main_log_dir, experiment_name, timestamp):
+    exp_dir = main_log_dir / '_'.join(
+        [experiment_name,
+         timestamp.strftime('%Y-%m-%dT%H-%M-%S')])
+    return exp_dir
+
+
+experiment_dir = cmd_args.experiment_dir or get_exp_dir(
+    cmd_args.main_log_dir, cmd_args.experiment,
+    datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))
+
 experiment_dir.mkdir(parents=True, exist_ok=True)
+
 # setup root logger
 file_log_handler = logging.FileHandler(experiment_dir / "run.log")
 console_log_handler = logging.StreamHandler(sys.stdout)
