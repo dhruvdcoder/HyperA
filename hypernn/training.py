@@ -193,7 +193,9 @@ def get_model(args, inputs):
             args.hidden_dim,
             3,
             default_c,
-            freeze_emb=config.cmd_args.freeze_emb).to(config.dtype)
+            freeze_emb=config.cmd_args.freeze_emb,
+            emb_size=config.cmd_args.emb_size,
+            init_avg_norm=config.cmd_args.emb_init_avg_norm).to(config.dtype)
         model.to(config.device)
         logger.info("Using model: {}".format(model.__class__.__name__))
     return model

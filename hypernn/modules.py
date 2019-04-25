@@ -130,12 +130,40 @@ class Logits(nn.Module):
 
 
 class HyperEmbeddings(nn.Embedding):
+    def __init__(
+            self,
+            num_embeddings,
+            embedding_dim,
+            padding_idx=None,
+            max_norm=None,
+            norm_type=2.,
+            scale_grad_by_freq=False,
+            sparse=False,
+            _weight=None,
+            init_avg_norm=0.001,
+    ):
+        self.init_avg_norm = init_avg_norm
+        super(HyperEmbeddings, self).__init__(
+            num_embeddings,
+            embedding_dim,
+            padding_idx=None,
+            max_norm=None,
+            norm_type=2.,
+            scale_grad_by_freq=False,
+            sparse=False,
+            _weight=None)
+
     def get_hyperbolic_params(self):
         wts = self.weight
         return [wts]
 
     def get_euclidean_params(self):
         return []
+
+    def reset_parameters(self):
+        maxval = (3. * (self.init_avg_norm**2) / (2. * self.embedding_dim))**(
+            1. / 3)
+        torch.nn.init.uniform_(self.weight, -maxval, maxval)
 
     @classmethod
     def from_gensim_model(cls, gensim_model, c, freeze=False, sparse=False):

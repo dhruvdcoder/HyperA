@@ -36,8 +36,8 @@ def prepare_multiNLI(return_test_set=False,
     inputs.build_vocab(train, dev, test)
     answers.build_vocab(train)
     # load pretrained embs
-    logger.info('Loading pretrained embs')
     if use_pretrained:
+        logger.info('Loading pretrained embs')
         if emb_cache_file is not None:  # specified through cmd
             if emb_cache_file.is_file():
                 logger.info('Loading embs from {}'.format(emb_cache_file))
@@ -60,6 +60,10 @@ def prepare_multiNLI(return_test_set=False,
                     config.emb_cache_file))
                 torch.save(inputs.vocab.vectors, config.emb_cache_file)
     else:
+        # dont do anything. .vector of vocab will be None.
+        # this will be used by the Models to tell HyperEmbeddings
+        # to do appropriate initialization
+        logger.info("Not loading any pretrained embs...")
         pass
 
     if not return_test_set:

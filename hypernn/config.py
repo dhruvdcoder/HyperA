@@ -55,7 +55,17 @@ def get_args():
         '--vector_cache',
         type=Path,
         help='filename for saving word embeddings cache')
-    parser.add_argument('--use_pretrained', default=True, action='store_true')
+    parser.add_argument('--use_pretrained', default=False, action='store_true')
+    parser.add_argument(
+        '--emb_size',
+        type=int,
+        help='Has to be passed if --use_pretrained is not used')
+    parser.add_argument(
+        '--emb_init_avg_norm',
+        default=0.001,
+        type=float,
+        help=('Average norm for uniformly initialized word embs.'
+              'Required if --use_pretrained is False'))
     parser.add_argument('--freeze_emb', default=False, action='store_true')
     parser.add_argument(
         '--resume_snapshot',
@@ -84,7 +94,7 @@ def get_args():
         help='double or float')
     parser.add_argument(
         '--mainlogdir',
-        required=True,
+        required=False,
         type=Path,
         default=(root_dir / 'logs'),
         help='Top level log dir. Logs for individual experiments are'
