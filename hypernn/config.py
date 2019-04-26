@@ -12,6 +12,13 @@ from datetime import datetime
 root_dir = Path(__file__).parent.parent
 
 
+def int_or_None(inp):
+    if inp is None:
+        return inp
+    else:
+        return int(inp)
+
+
 def get_args():
     parser = argparse.ArgumentParser(
         description='To level config for the HyperA project')
@@ -50,7 +57,10 @@ def get_args():
         default='multinli_1.0_dev_mismatched.jsonl',
         type=Path)
     parser.add_argument(
-        '--max_seq_len', default=100, help='Max sentence length', type=int)
+        '--max_seq_len',
+        default=None,
+        help='Max sentence length',
+        type=int_or_None)
     parser.add_argument(
         '--vector_cache',
         type=Path,
