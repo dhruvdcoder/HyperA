@@ -76,7 +76,7 @@ def get_args():
         type=float,
         help=('Average norm for uniformly initialized word embs.'
               'Required if --use_pretrained is False'))
-    parser.add_argument('--freeze_emb', default=False, action='store_true')
+    parser.add_argument('--freeze_emb', action='store_true')
     parser.add_argument(
         '--resume_snapshot',
         type=Path,
@@ -140,8 +140,7 @@ def get_exp_dir(main_log_dir, experiment_name, timestamp):
 
 
 experiment_dir = cmd_args.experiment_dir or get_exp_dir(
-    cmd_args.main_log_dir, cmd_args.experiment,
-    datetime.now().strftime('%Y-%m-%dT%H-%M-%S'))
+    cmd_args.mainlogdir, cmd_args.experiment, datetime.now())
 
 experiment_dir.mkdir(parents=True, exist_ok=True)
 

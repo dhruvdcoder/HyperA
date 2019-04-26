@@ -42,11 +42,11 @@ class Linear(nn.Module):
         return 'in_features={}, out_features={}, bias={}'.format(
             self.in_features, self.out_features, self.bias is not None)
 
-    def get_hyperbolic_params(self):
+    def get_euclidean_params(self):
         """Convenience function to collect params for optmization"""
         return [self.weight]
 
-    def get_euclidean_params(self):
+    def get_hyperbolic_params(self):
         if self.bias is None:
             return []
         else:
@@ -146,12 +146,12 @@ class HyperEmbeddings(nn.Embedding):
         super(HyperEmbeddings, self).__init__(
             num_embeddings,
             embedding_dim,
-            padding_idx=None,
-            max_norm=None,
-            norm_type=2.,
-            scale_grad_by_freq=False,
-            sparse=False,
-            _weight=None)
+            padding_idx=padding_idx,
+            max_norm=max_norm,
+            norm_type=norm_type,
+            scale_grad_by_freq=scale_grad_by_freq,
+            sparse=sparse,
+            _weight=_weight)
 
     def get_hyperbolic_params(self):
         wts = self.weight
@@ -164,6 +164,10 @@ class HyperEmbeddings(nn.Embedding):
         maxval = (3. * (self.init_avg_norm**2) / (2. * self.embedding_dim))**(
             1. / 3)
         torch.nn.init.uniform_(self.weight, -maxval, maxval)
+        # IMPORTANT set padding emb to zero
+        if self.padding_idx is not None:
+            with torch.no_grad():
+                self.weight[self.padding_idx].fill_(0)
 
     @classmethod
     def from_gensim_model(cls, gensim_model, c, freeze=False, sparse=False):
