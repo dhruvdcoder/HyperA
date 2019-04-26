@@ -136,7 +136,10 @@ class ConcatRNN(nn.Module):
         rolled_vector = torch.cat((premise_emb, hypothesis_emb), -2)
         #h0 = torch.zeros(rolled_vector.size(0), self.hidden_dim).double()
         h0 = torch.zeros(
-            rolled_vector.size(0), self.hidden_dim, dtype=rolled_vector.dtype)
+            rolled_vector.size(0),
+            self.hidden_dim,
+            dtype=rolled_vector.dtype,
+            device=rolled_vector.device)
         output = self.rnn((rolled_vector, h0))
         #output = self.rnn(rolled_vector)
         logits = self.logits(output)
