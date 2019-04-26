@@ -189,13 +189,14 @@ class HyperEmbeddings(nn.Embedding):
 class HyperRNNCell(nn.Module):
     """TODO: support num_layers parameter"""
 
-    def __init__(self, input_size, hidden_dim, c=m.default_c):
+    def __init__(self, input_size, hidden_dim, activation='id', c=m.default_c):
         super(HyperRNNCell, self).__init__()
         self.input_size = input_size
         self.hidden_dim = hidden_dim
         self.l_ih = Linear(input_size, hidden_dim, bias=False)
         self.l_hh = Linear(hidden_dim, hidden_dim)
         self.c = c
+        self.activation = activation
 
     def forward(self, inp_tuple):
         inp, prev_h = inp_tuple
@@ -204,7 +205,8 @@ class HyperRNNCell(nn.Module):
         # print (inp.size())
         prem = self.l_ih(inp)
         hid = self.l_hh(prev_h)
-        h_next = m.tanh(m.add(prem, hid, self.c), c=self.c)
+        h_next = activations_dict[self.activation](
+            m.add(prem, hid, self.c), c=self.c)
         return h_next
 
     def get_hyperbolic_params(self, bias_lr=0.01):
@@ -224,12 +226,14 @@ class HyperRNNCell(nn.Module):
 
 
 class HyperRNN(nn.Module):
-    def __init__(self, input_size, hidden_size, c=m.default_c):
+    def __init__(self, input_size, hidden_size, activation='id',
+                 c=m.default_c):
         super(HyperRNN, self).__init__()
         self.hidden_size = hidden_size
         self.input_size = input_size
         self.c = c
-        self.rnn_cell = HyperRNNCell(self.input_size, self.hidden_size, self.c)
+        self.rnn_cell = HyperRNNCell(
+            self.input_size, self.hidden_size, activation=activation, c=self.c)
 
     def forward(self, inp):
         x, h0 = inp

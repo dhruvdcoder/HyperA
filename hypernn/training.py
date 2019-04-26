@@ -10,7 +10,7 @@ import logger as tb_logger
 import argparse
 from pathlib import Path
 from data.loader import prepare_multiNLI
-from hypernn.models import ConcatRNN, HyperDeepAvgNet, default_c
+from hypernn.models import ConcatRNN, HyperDeepAvgNet, AddRNN, default_c
 logger = logging.getLogger(__file__)
 
 
@@ -18,7 +18,10 @@ def default_params():
     return {'emb_lr': 0.1, 'bias_lr': 0.01, 'lr': 0.001}
 
 
-model_zoo = {'hconcatrnn': ConcatRNN, 'hdeepavg': HyperDeepAvgNet}
+model_zoo = {
+    'hconcatrnn': ConcatRNN,
+    'hdeepavg': HyperDeepAvgNet,
+}
 
 
 def parse_args():
@@ -204,7 +207,7 @@ def get_model(args, inputs):
 if __name__ == '__main__':
     args = parse_args()
     optim_params = {
-        'bias_lr': args.hyp_emb_lr,
+        'bias_lr': args.hyp_bias_lr,
         'emb_lr': args.hyp_emb_lr,
         'lr': args.euc_lr
     }

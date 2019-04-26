@@ -187,7 +187,13 @@ else:
 if cmd_args.save_dir is not None:
     save_dir = cmd_args.save_dir
 else:
-    save_dir = root_dir / '.saved_models' / '.default'
+    save_dir = root_dir / '.saved_models'
+    if cmd_args.experiment is not None:
+        save_dir = save_dir / cmd_args.experiment
+    elif experiment_dir.stem != '':
+        save_dir = save_dir / experiment_dir.stem
+    else:
+        save_dir = save_dir / '.default'
 save_dir.mkdir(parents=True, exist_ok=True)
 
 train_log_header = '  Time Epoch/Total Iteration Loss Accuracy'
