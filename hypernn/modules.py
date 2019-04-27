@@ -314,7 +314,7 @@ class HyperGRU(nn.Module):
         self.hidden_size = hidden_size
         self.input_size = input_size
         self.c = c
-        self.GRUCell = HyperGRUCell(hidden_size, input_size, self.c)
+        self.gru_cell = HyperGRUCell(hidden_size, input_size, self.c)
 
     def forward(self, inp):
         # Assert that inp.dimension is of form (NxWxE)
@@ -325,31 +325,14 @@ class HyperGRU(nn.Module):
         prev_h = h0
         for t in range(tsteps):
             inp_cell = inp[:, t, :]
-            next_h = self.GRUCell((inp_cell, prev_h))
+            next_h = self.gru_cell((inp_cell, prev_h))
             prev_h = next_h
 
         return next_h
 
-
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
         """Get list of hyperbolic params"""
-        hyp_params = []
-        hyp_params.append({
-            'params': self.emb.get_hyperbolic_params(),
-            'lr': emb_lr
-        })
-        bias_params = [
-            layer.get_hyperbolic_params() for layer in [
-                self.GRUCell
-            ]
-        ]
-        hyp_params.append({'params': bias_params, 'lr': bias_lr})
+        return self.gru_cell.get_hyperbolic_params()
 
     def get_euclidean_params(self, lr=0.001):
-        params_list = [
-            layer.get_euclidean_params() for layer in [
-                self.GRUCell
-            ]
-        ]
-        euc_params = [{'params': params_list, 'lr': lr}]
-        return euc_params
+        return self.gru_cell.get_euclidean_params()
