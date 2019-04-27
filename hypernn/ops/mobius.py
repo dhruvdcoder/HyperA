@@ -151,6 +151,23 @@ def matmul(M, x, c, dim=-1):
         clipped_tanh(prod_n / x_n * atanh(sqrt_c * x_n)) * prod) / prod_n
     return project_in_ball(res, c, dim=dim)
 
+def tf_mob_mat_mul(M, x, c):
+    x = x + EPS
+    Mx = tf.matmul(x, M) + EPS
+    MX_norm = tf_norm(Mx)
+    x_norm = tf_mob_pointwise_prodm(x)
+    result = 1. / np.sqrt(c) * tf_tanh(MX_norm / x_norm * tf_atanh(np.sqrt(c) * x_norm)) / MX_norm * Mx
+    return tf_project_hyp_vecs(result, c)
+
+
+def tf_mob_pointwise_prod(M, u, c):
+    x = x + perterb
+    Mx = x * u + EPS
+    MX_norm = tf_norm(Mx)
+    x_norm = tf_norm(x)
+    result = 1. / np.sqrt(c) * tf_tanh(MX_norm / x_norm * tf_atanh(np.sqrt(c) * x_norm)) / MX_norm * Mx
+    return tf_project_hyp_vecs(result, c)
+
 
 def sum(x, c, dim=-2):
     """Not starightforward to vectorize add.
@@ -209,8 +226,11 @@ def pointwise_mul(a, b, c):
     Hadamard (Pointwise product) in Hyperbolic space
     Refer to GRU implementation in original paper
     """
+    print ("Input shape: ", a.size(), b.size())
     diag_repr = torch.diag_embed(a)
-    return matmul(diag_repr, b, c)
+    out = matmul(diag_repr, b, c)
+    print ("Output shape: ", out.size())
+    return out
 
 
 def logits(x, p, a, c):

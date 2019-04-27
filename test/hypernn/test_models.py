@@ -51,5 +51,7 @@ def test_training_ConcatRNN():
 
 if __name__ == '__main__':
     #test_training_HyperDeepAvgNet()
-    with detect_anomaly():
-        test_training_ConcatRNN()
+    # with detect_anomaly():
+    #    test_training_ConcatRNN()
+    # test_training_ConcatRNN()
+    test_training_ConcatGRU()
