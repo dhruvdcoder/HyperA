@@ -242,10 +242,8 @@ class HyperRNN(nn.Module):
         tsteps = x.size(-2)
         prev_h = h0
         for t in range(tsteps):
-            print ("Iteration is: ", t)
             inp_cell = x[:, t, :]
             prev_h = self.rnn_cell((inp_cell, prev_h))
-            print ("Output is: ", prev_h)
 
         return prev_h
 

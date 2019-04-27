@@ -153,6 +153,10 @@ def matmul(M, x, c, dim=-1):
 
 
 def pointwise_prod(x, u, c, dim=-1):
+    """
+    Hadamard (Pointwise product) in Hyperbolic space
+    Refer to GRU implementation in original paper
+    """
     x += perterb
     prod = x * u + perterb
     prod_n = norm(prod, dim=dim)
@@ -212,18 +216,6 @@ def mean(x, c, dim=-2):
     new_hidden_dim_idx = dim + 1
     r = scalar_mul(1. / n, s, c, dim=new_hidden_dim_idx)
     return r
-
-
-def pointwise_mul(a, b, c):
-    """
-    Hadamard (Pointwise product) in Hyperbolic space
-    Refer to GRU implementation in original paper
-    """
-    print ("Input shape: ", a.size(), b.size())
-    diag_repr = torch.diag_embed(a)
-    out = matmul(diag_repr, b, c)
-    print ("Output shape: ", out.size())
-    return out
 
 
 def logits(x, p, a, c):
