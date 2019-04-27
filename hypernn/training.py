@@ -10,7 +10,7 @@ import logger as tb_logger
 import argparse
 from pathlib import Path
 from data.loader import prepare_multiNLI
-from hypernn.models import ConcatRNN, HyperDeepAvgNet, AddRNN, default_c
+from hypernn.models import ConcatRNN, ConcatGRU, HyperDeepAvgNet, AddRNN, default_c
 logger = logging.getLogger(__file__)
 
 
@@ -20,6 +20,7 @@ def default_params():
 
 model_zoo = {
     'hconcatrnn': ConcatRNN,
+    'hconcatgru': ConcatGRU,
     'hdeepavg': HyperDeepAvgNet,
 }
 
@@ -28,7 +29,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--model',
-        default='hconcatrnn',
+        default='hconcatgru',
         choices=list(model_zoo.keys()),
         help=' or '.join(list(model_zoo.keys())))
     parser.add_argument('--hidden_dim', type=int, default=50)
@@ -120,8 +121,7 @@ def train_main(model,
                         loss.item(), train_acc))
                 # print the tensorboard
                 tb_logger.tb_logger.add_scalar('loss', loss.item(), iterations)
-                tb_logger.tb_logger.add_scalar('train_acc', train_acc,
-                                               iterations)
+                tb_logger.tb_logger.add_scalar('train_acc', train_acc, iterations)
             # checkpoint model periodically
             if iterations % save_every == 0:
                 snapshot_path = save_dir / 'snapshot_acc_{:.4f}_loss_{:.6f}_iter_{}_model_{}.pt'.format(
