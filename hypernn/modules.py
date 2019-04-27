@@ -259,23 +259,16 @@ class HyperGRUCell(nn.Module):
 
     def forward(self, inp):
         inp, prev = inp
-        rt_h = self.Wr(prev)
-        rt_x = self.Ur(inp)
-        rt_add = m.add(rt_h, rt_x, c=self.c)
-        rt_log = m.log_map_0(rt_add, self.c)
-        rt = torch.sigmoid(rt_log)
-        zt_h = self.Wz(prev)
-        zt_x = self.Uz(inp)
-        zt_add = m.add(zt_h, zt_x, self.c)
-        zt_log = m.log_map_0(zt_add, self.c)
-        zt = torch.sigmoid(zt_log)
-        ht_new_h = self.W(torch.diag_embed(rt), prev)
-        ht_new_x = self.U(inp)
-        ht_new = m.add(ht_new_h, ht_new_x, self.c)
-        res1 = m.add(-prev, ht_new, self.c)
-        res2 = m.matmul(torch.diag_embed(zt), res1, self.c)
-        ht = m.add(prev, res2, self.c)
-        res = activations_dict[self.activation](ht, self.c)
+        rt = torch.sigmoid(
+            m.log_map_0(m.add(self.Wr(prev), self.Ur(inp), c=self.c), self.c))
+        zt = torch.sigmoid(
+            m.log_map_0(m.add(self.Wz(prev), self.Uz(inp), self.c), self.c))
+        ht_new = m.add(self.W(torch.diag_embed(rt), prev), self.U(inp), self.c)
+        res = activations_dict[self.activation](m.add(
+            prev,
+            m.matmul(
+                torch.diag_embed(zt), m.add(-prev, ht_new, self.c), self.c),
+            self.c), self.c)
         return res
 
     def layers(self):
