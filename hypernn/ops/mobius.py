@@ -196,6 +196,15 @@ def mean(x, c, dim=-2):
     return r
 
 
+def pointwise_mul(a, b, c):
+    """
+    Hadamard (Pointwise product) in Hyperbolic space
+    Refer to GRU implementation in original paper
+    """
+    diag_repr = torch.diag_embed(a)
+    return matmul(diag_repr, b, c)
+
+
 def logits(x, p, a, c):
     """Finds the logits to be used by softmax
 
@@ -260,6 +269,9 @@ def relu(x, c):
 
 def tanh(x, c):
     return activation(x, torch.tanh, c)
+
+def sigmoid(x, c):
+    return activation(x, torch.sigmoid, c)
 
 
 def rnn_step(x, h_prev, w_h, w_x, b, c):
