@@ -93,7 +93,10 @@ class RSGD(torch.optim.Optimizer):
                 #else:
                 #   d_p = d_p.mul(squeezed_rescale_factor.expand(d_p.size(0)))
 
-                p.data.add_(-group['lr'], d_p)
+                #p.data.add_(-group['lr'],
+                #           d_p)  # is this correct or should we do
+                # mobius add?
+                p.data = m.exp_map(p.data, -group['lr'] * d_p, m.default_c)
                 param_num += 1
             group_no += 1
         return loss

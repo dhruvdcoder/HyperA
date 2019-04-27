@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import hypernn.ops.mobius as m
 import math
+from logger import TensorboardLoggingMixin
 
 
 class Linear(nn.Module):
@@ -41,15 +42,18 @@ class Linear(nn.Module):
         return 'in_features={}, out_features={}, bias={}'.format(
             self.in_features, self.out_features, self.bias is not None)
 
-    def get_hyperbolic_params(self):
+    def get_euclidean_params(self):
         """Convenience function to collect params for optmization"""
         return [self.weight]
 
-    def get_euclidean_params(self):
+    def get_hyperbolic_params(self):
         if self.bias is None:
             return []
         else:
             return [self.bias]
+
+
+activations_dict = {'tanh': m.tanh, 'relu': m.relu, 'id': m.id}
 
 
 class Dense(Linear):
@@ -60,14 +64,15 @@ class Dense(Linear):
                  in_features,
                  out_features,
                  bias=True,
-                 activation=m.tanh,
+                 activation='id',
                  c=m.default_c):
         super(Dense, self).__init__(in_features, out_features, bias, c)
-        self.activation = lambda x: activation(x, c=self.c)
+        self.activation = activation
 
     def forward(self, inp):
         after_linear = super().forward(inp)
-        return self.activation(after_linear)
+        res = activations_dict[self.activation](after_linear, self.c)
+        return res
 
     def extra_repr(self):
         return ('in_features={}, out_features={}, bias={},'
@@ -125,6 +130,29 @@ class Logits(nn.Module):
 
 
 class HyperEmbeddings(nn.Embedding):
+    def __init__(
+            self,
+            num_embeddings,
+            embedding_dim,
+            padding_idx=None,
+            max_norm=None,
+            norm_type=2.,
+            scale_grad_by_freq=False,
+            sparse=False,
+            _weight=None,
+            init_avg_norm=0.001,
+    ):
+        self.init_avg_norm = init_avg_norm
+        super(HyperEmbeddings, self).__init__(
+            num_embeddings,
+            embedding_dim,
+            padding_idx=padding_idx,
+            max_norm=max_norm,
+            norm_type=norm_type,
+            scale_grad_by_freq=scale_grad_by_freq,
+            sparse=sparse,
+            _weight=_weight)
+
     def get_hyperbolic_params(self):
         wts = self.weight
         return [wts]
@@ -132,31 +160,53 @@ class HyperEmbeddings(nn.Embedding):
     def get_euclidean_params(self):
         return []
 
+    def reset_parameters(self):
+        maxval = (3. * (self.init_avg_norm**2) / (2. * self.embedding_dim))**(
+            1. / 3)
+        torch.nn.init.uniform_(self.weight, -maxval, maxval)
+        # IMPORTANT set padding emb to zero
+        if self.padding_idx is not None:
+            with torch.no_grad():
+                self.weight[self.padding_idx].fill_(0)
+
     @classmethod
-    def from_gensim_model(cls,
-                          gensim_model,
-                          freeze=False,
-                          sparse=True,
-                          c=m.default_c):
+    def from_gensim_model(cls, gensim_model, c, freeze=False, sparse=False):
         emb_tensor = torch.tensor(gensim_model.vectors)
         return super(HyperEmbeddings, cls).from_pretrained(
             emb_tensor, freeze=freeze, sparse=sparse)
+
+    @classmethod
+    def from_vectors(cls, vectors, c, freeze=False, sparse=False):
+        return super(HyperEmbeddings, cls).from_pretrained(
+            vectors, freeze=freeze, sparse=sparse)
+
+    @classmethod
+    def from_torchtext_vocab(cls, vocab, c, freeze=False, sparse=False):
+        return super(HyperEmbeddings, cls).from_pretrained(
+            vocab.vectors, freeze=freeze, sparse=sparse)
 
 
 class HyperRNNCell(nn.Module):
     """TODO: support num_layers parameter"""
 
-    def __init__(self, input_size, hidden_dim, c=m.default_c):
+    def __init__(self, input_size, hidden_dim, activation='id', c=m.default_c):
         super(HyperRNNCell, self).__init__()
         self.input_size = input_size
         self.hidden_dim = hidden_dim
         self.l_ih = Linear(input_size, hidden_dim, bias=False)
         self.l_hh = Linear(hidden_dim, hidden_dim)
         self.c = c
+        self.activation = activation
 
     def forward(self, inp_tuple):
         inp, prev_h = inp_tuple
-        h_next = m.tanh(m.add(self.l_ih(inp), self.l_hh(prev_h), c=self.c), c=self.c)
+        # TODO: Bias?
+        # h_next = m.tanh(m.add(self.l_premise_hyp(inp), self.l_hidden(prev_h)), c=self.c)
+        # print (inp.size())
+        prem = self.l_ih(inp)
+        hid = self.l_hh(prev_h)
+        h_next = activations_dict[self.activation](
+            m.add(prem, hid, self.c), c=self.c)
         return h_next
 
     def get_hyperbolic_params(self, bias_lr=0.01):
@@ -176,15 +226,19 @@ class HyperRNNCell(nn.Module):
 
 
 class HyperRNN(nn.Module):
-    def __init__(self, input_size, hidden_size, c=m.default_c):
+    def __init__(self, input_size, hidden_size, activation='id',
+                 c=m.default_c):
         super(HyperRNN, self).__init__()
         self.hidden_size = hidden_size
         self.input_size = input_size
         self.c = c
-        self.rnn_cell = HyperRNNCell(self.input_size, self.hidden_size, self.c)
+        self.rnn_cell = HyperRNNCell(
+            self.input_size, self.hidden_size, activation=activation, c=self.c)
 
     def forward(self, inp):
         x, h0 = inp
+        #x = inp
+        #h0 = torch.zeros(x.size(0), self.hidden_size).double()
         tsteps = x.size(-2)
         prev_h = h0
         for t in range(tsteps):

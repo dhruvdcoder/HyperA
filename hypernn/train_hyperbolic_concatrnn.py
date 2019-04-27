@@ -1,4 +1,4 @@
-from hypernn.models import HyperDeepAvgNet
+from hypernn.models import ConcatRNN
 from data.loader import prepare_multiNLI
 from hypernn.training import train_main, default_params
 import hypernn.embeddings as embs
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--hidden_dim', type=int, default=50)
-    parser.add_argument('--hyp_bias_lr', type=float, default=0.001)
+    parser.add_argument('--hyp_bias_lr', type=float, default=0.01)
     parser.add_argument('--hyp_emb_lr', type=float, default=0.1)
     parser.add_argument('--euc_lr', type=float, default=0.001)
-    parser.add_argument('--print_every', type=int, default=100)
+    parser.add_argument('--print_every', type=int, default=5)
     parser.add_argument('--save_every', type=int, default=1000)
     parser.add_argument('--val_every', type=int, default=500)
     parser.add_argument('--save_dir', type=Path, default=config.save_dir)
@@ -42,7 +42,8 @@ if __name__ == '__main__':
         embs_file=config.default_poincare_glove,
         max_seq_len=config.cmd_args.max_seq_len,
         batch_size=128,
-        device=config.device)
+        device=config.device,
+        use_pretrained=config.cmd_args.use_pretrained)
     logger.info('Loaded data and embs')
     if config.cmd_args.resume_snapshot is not None:
         logger.info('Resuming training using model from {}'.format(
@@ -52,9 +53,14 @@ if __name__ == '__main__':
             map_location=config.device).to(config.dtype)
     else:
         logger.info('Creating new model for training')
-        logger.info('hidden_dim={}'.format(args.hidden_dim))
-        model = HyperDeepAvgNet(inputs.vocab, args.hidden_dim, 3,
-                                hmodels.default_c).to(config.dtype)
+        logger.info('hidden_dim={}, freeze_emb={}'.format(
+            args.hidden_dim, config.cmd_args.freeze_emb))
+        model = ConcatRNN(
+            inputs.vocab,
+            args.hidden_dim,
+            3,
+            hmodels.default_c,
+            freeze_emb=config.cmd_args.freeze_emb).to(config.dtype)
         model.to(config.device)
     train_main(
         model,

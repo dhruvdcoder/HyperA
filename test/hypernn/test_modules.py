@@ -5,6 +5,7 @@ import test.np_utils as np_utils
 import torch
 import numpy as np
 import logging
+from torch.autograd import detect_anomaly
 logger = logging.getLogger(__name__)
 
 
@@ -145,7 +146,7 @@ def test_RNN_grad():
             np_utils.random_vec((batch_size, timesteps, emb_size)),
             requires_grad=True).double()
         h0 = torch.zeros(x.size(0), hidden_size)
-        torch.autograd.gradcheck(hnn_rnn, ((x, h0), ))
+        torch.autograd.gradcheck(hnn_rnn, x)
 
     for i in range(1):
         test_case()
@@ -155,6 +156,7 @@ if __name__ == '__main__':
     #test_Linear_forward()
     # test_Dense()
     # m.set_float(32)
-    test_RNN_grad()
+    with detect_anomaly():
+        test_RNN_grad()
     # test_Linear_grad()
     # test_Dense_grad()

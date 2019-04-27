@@ -2,10 +2,12 @@
 import torch
 from numpy import sqrt
 import numpy as np
-
+import logging
+logger = logging.getLogger(__name__)
 ##### Constants ######
 ball_boundary = 1e-5
 perterb = 1e-15
+max_tanh_arg = 15.0
 default_c = 1.
 
 
@@ -28,6 +30,12 @@ def norm_sq(x, dim=-1):
     return norm(x, dim=dim)**2
 
 
+def clipped_tanh(x):
+    #x_clip = torch.clamp(x, -max_tanh_arg, max_tanh_arg)
+    x_clip = x
+    return torch.tanh(x_clip)
+
+
 def atanh(x):
     """ dim(x)=any. Applies atanh to each entry"""
     x_const = torch.clamp(x, -1. + ball_boundary, 1. - ball_boundary)
@@ -45,6 +53,8 @@ def project_in_ball(x, c, dim=-1):
     normx = norm(x, dim=dim)
     radius = (1. - ball_boundary) / sqrt(c)
     project = x / normx * radius
+    #if bool(torch.isnan(project).any()):
+    #    logger.debug("rad={}\nx={}\nnormx={}".format(radius, x, normx))
     r = torch.where(normx >= radius, project, x)
     return r
 
@@ -77,7 +87,7 @@ def scalar_mul(r, a, c, dim=-1):
     a = a + perterb
     norm_a = norm(a, dim=dim)
     sqrt_c = sqrt(c)
-    numerator = torch.tanh(r * atanh(sqrt_c * norm_a))
+    numerator = clipped_tanh(r * atanh(sqrt_c * norm_a))
     res = numerator / (sqrt_c * norm_a) * a
     return project_in_ball(res, c, dim=dim)
 
@@ -95,9 +105,9 @@ def exp_map(x, v, c, dim=-1):
     v = v + perterb
     norm_v = norm(v, dim=dim)
     sqrt_c = sqrt(c)
-    displacement_vector = torch.tanh(sqrt_c * conformal_factor(x, c, dim=dim) *
-                                     norm_v / 2.) / (sqrt_c * norm_v) * v
-    return add(x, displacement_vector, dim=dim)
+    displacement_vector = clipped_tanh(sqrt_c * conformal_factor(
+        x, c, dim=dim) * norm_v / 2.) / (sqrt_c * norm_v) * v
+    return add(x, displacement_vector, c, dim=dim)
 
 
 def log_map(x, y, c, dim=-1):
@@ -114,7 +124,7 @@ def exp_map_0(v, c, dim=-1):
     v = v + perterb
     norm_v = norm(v, dim=-1)
     sqrt_c = sqrt(c)
-    res = torch.tanh(sqrt_c * norm_v) / (sqrt_c * norm_v) * v
+    res = clipped_tanh(sqrt_c * norm_v) / (sqrt_c * norm_v) * v
     return project_in_ball(res, c, dim=dim)
 
 
@@ -132,15 +142,13 @@ def matmul(M, x, c, dim=-1):
     dim(M) = emb, output
     dim(out) = batch, output
     """
-    if len(x.shape) > 2:
-        raise ValueError("Mobius matmul cannot handle more that 2D array")
     x = x + perterb
     prod = torch.matmul(x, M) + perterb
     prod_n = norm(prod, dim=dim)
     x_n = norm(x, dim=dim)
     sqrt_c = sqrt(c)
     res = 1. / sqrt_c * (
-        torch.tanh(prod_n / x_n * atanh(sqrt_c * x_n)) * prod) / prod_n
+        clipped_tanh(prod_n / x_n * atanh(sqrt_c * x_n)) * prod) / prod_n
     return project_in_ball(res, c, dim=dim)
 
 
@@ -170,7 +178,7 @@ def sum(x, c, dim=-2):
     #return project_in_ball(res, c=c, dim=dim)
     out_shape = list(x.size())
     out_shape.pop(dim)
-    acc = torch.zeros(out_shape)
+    acc = torch.zeros(out_shape, dtype=x.dtype)
     for seq_arr in torch.unbind(x, dim):
         # seq_arr will be of shape (batch, hidden)
         acc = add(acc, seq_arr, c)
@@ -224,8 +232,8 @@ def logits(x, p, a, c):
     # defined for 2-dimensions, will form the
     # logit matrix of shape (batch, num_classes)
     # column by column
-    assert p.shape == a.shape
-    assert p.size(1) == x.size(1)
+    #assert p.shape == a.shape
+    #assert p.size(1) == x.size(1)
     dot_px_as = []
     cf_pxs = []
     norm_a = []
@@ -272,6 +280,10 @@ def tanh(x, c):
 
 def sigmoid(x, c):
     return activation(x, torch.sigmoid, c)
+
+
+def id(x, c):
+    return x
 
 
 def rnn_step(x, h_prev, w_h, w_x, b, c):
