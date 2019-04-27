@@ -319,12 +319,13 @@ class HyperGRU(nn.Module):
     def forward(self, inp):
         # Assert that inp.dimension is of form (NxWxE)
         # assert (inp)
-
-        h0 = torch.zeros(inp.size()[0], self.hidden_size).double()
-        tsteps = inp.size()[-2]
+        # h0 = torch.zeros(inp.size()[0], self.hidden_size).double()
+        
+        x, h0 = inp
+        tsteps = x.size()[-2]
         prev_h = h0
         for t in range(tsteps):
-            inp_cell = inp[:, t, :]
+            inp_cell = x[:, t, :]
             next_h = self.gru_cell((inp_cell, prev_h))
             prev_h = next_h
 
