@@ -296,14 +296,14 @@ class HyperGRUCell(nn.Module):
     def get_hyperbolic_params(self, bias_lr=0.01):
         """Get list of hyperbolic params"""
         bias_params = []
-        for layer in [self.l_ih, self.l_hh]:
+        for layer in [self.l_inp_z, self.l_hid_z, self.l_inp_r, self.l_hid_r, self.l_inp_h, self.l_hid_h]:
             params = layer.get_hyperbolic_params()
             bias_params += params
         return bias_params
 
     def get_euclidean_params(self, lr=0.001):
         params_list = []
-        for layer in [self.l_ih, self.l_hh]:
+        for layer in [self.l_inp_z, self.l_hid_z, self.l_inp_r, self.l_hid_r, self.l_inp_h, self.l_hid_h]:
             params = layer.get_euclidean_params()
             params_list += params
         return params_list
