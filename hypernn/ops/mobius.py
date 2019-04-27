@@ -151,22 +151,15 @@ def matmul(M, x, c, dim=-1):
         clipped_tanh(prod_n / x_n * atanh(sqrt_c * x_n)) * prod) / prod_n
     return project_in_ball(res, c, dim=dim)
 
-def tf_mob_mat_mul(M, x, c):
-    x = x + EPS
-    Mx = tf.matmul(x, M) + EPS
-    MX_norm = tf_norm(Mx)
-    x_norm = tf_mob_pointwise_prodm(x)
-    result = 1. / np.sqrt(c) * tf_tanh(MX_norm / x_norm * tf_atanh(np.sqrt(c) * x_norm)) / MX_norm * Mx
-    return tf_project_hyp_vecs(result, c)
 
-
-def tf_mob_pointwise_prod(M, u, c):
-    x = x + perterb
-    Mx = x * u + EPS
-    MX_norm = tf_norm(Mx)
-    x_norm = tf_norm(x)
-    result = 1. / np.sqrt(c) * tf_tanh(MX_norm / x_norm * tf_atanh(np.sqrt(c) * x_norm)) / MX_norm * Mx
-    return tf_project_hyp_vecs(result, c)
+def pointwise_prod(x, u, c, dim=-1):
+    x += perterb
+    prod = x * u + perterb
+    prod_n = norm(prod, dim=dim)
+    x_n = norm(x, dim=dim)
+    sqrt_c = sqrt(c)
+    result = 1. / sqrt_c * clipped_tanh(prod_n / x_n * atanh(sqrt_c * x_n)) / prod_n * prod
+    return project_in_ball(result, c, dim)
 
 
 def sum(x, c, dim=-2):

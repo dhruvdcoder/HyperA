@@ -48,6 +48,21 @@ def test_training_ConcatRNN():
           random_data_generator(batch_size, seq_len, num_classes, num_batches),
           params)
 
+def test_training_ConcatGRU():
+    params = default_params()
+    hyp_emb_model = embs.load_word2vec(config.default_poincare_glove)
+    hidden_dim = 10
+    num_classes = 3
+    batch_size = 64
+    num_batches = 10
+    seq_len = 2
+    vocab_size = len(hyp_emb_model.vocab)
+    model = hmodels.ConcatGRU(hyp_emb_model, hidden_dim, 3, c=1e-20).double()
+
+    train(model,
+          random_data_generator(batch_size, seq_len, num_classes, num_batches),
+          params)
+
 
 if __name__ == '__main__':
     #test_training_HyperDeepAvgNet()

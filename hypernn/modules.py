@@ -280,13 +280,19 @@ class HyperGRUCell(nn.Module):
 
         z = m.sigmoid(m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
         r = m.sigmoid(m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
-        temp_activ = m.tanh(m.add(self.l_inp_h(inp), m.pointwise_mul(self.l_hid_h(prev_h), r, c=self.c), c=self.c), c=self.c)
+        temp_activ = m.tanh(m.add(self.l_inp_h(inp), m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c), c=self.c), c=self.c)
 
-        one_minus_z = m.add(torch.DoubleTensor(1), -1.0 * z, c=self.c)
+        # There are 2 version of final state calculation, based on whether you want to use
+        # (1 - z) on previous state or h'
+        # They are:
+        # (1 - z) * h' + z * st-1 = z * (st-1 - h) + h'
+        # (1 - z) * st-1 + z * h' = z * (h' - st-1) + st-1
 
-        h_next = m.add(m.pointwise_mul(one_minus_z, prev_h, c=self.c), m.pointwise_mul(z, temp_activ, c=self.c), c=self.c)
+        # We used the second version
 
-        print (h_next.size())
+        minus_h = m.add(-prev_h, temp_activ, c=self.c)
+        h_next = m.add(-prev_h, m.pointwise_prod(minus_h, z, c=self.c), c=self.c)
+        # print (h_next.size())
         return h_next
 
     def get_hyperbolic_params(self, bias_lr=0.01):
