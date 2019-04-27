@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import hypernn.ops.mobius as m
 import math
-from logger import TensorboardLoggingMixin
 
 
 class Linear(nn.Module):
@@ -27,9 +26,10 @@ class Linear(nn.Module):
         # mode is fan_out because out weight is transpose of the weight of usual
         # linear layer
         if self.bias is not None:
-            fan_in = self.weight.size(0)
-            bound = 1 / math.sqrt(fan_in)
-            nn.init.uniform_(self.bias, -bound, bound)
+            #fan_in = self.weight.size(0)
+            #bound = 1 / math.sqrt(fan_in)
+            #nn.init.uniform_(self.bias, -bound, bound)
+            nn.init.zeros_(self.bias)
 
     def forward(self, inp):
         out = m.matmul(self.weight, inp, self.c)
@@ -51,6 +51,22 @@ class Linear(nn.Module):
             return []
         else:
             return [self.bias]
+
+
+class SpecialLinear(Linear):
+    """ Designed to apply W.M * x ++ b
+    (.) being euclidean matmul (*) being hyperbolic matmul
+    (++) being mobius add
+    """
+
+    def forward(self, M, inp):
+        assert M.size(-1) == self.weight.size(0)
+        assert M.size(-1) == M.size(-2)  # Should be square
+        mat = torch.matmul(M, self.weight)
+        out = m.matmul(mat, inp, self.c)
+        if self.bias is not None:
+            out = m.add(out, self.bias.unsqueeze(0), self.c)
+        return out
 
 
 activations_dict = {'tanh': m.tanh, 'relu': m.relu, 'id': m.id}
@@ -193,7 +209,7 @@ class HyperRNNCell(nn.Module):
         super(HyperRNNCell, self).__init__()
         self.input_size = input_size
         self.hidden_dim = hidden_dim
-        self.l_ih = Linear(input_size, hidden_dim, bias=False)
+        self.l_ih = Linear(input_size, hidden_dim)
         self.l_hh = Linear(hidden_dim, hidden_dim)
         self.c = c
         self.activation = activation
@@ -220,6 +236,64 @@ class HyperRNNCell(nn.Module):
     def get_euclidean_params(self, lr=0.001):
         params_list = []
         for layer in [self.l_ih, self.l_hh]:
+            params = layer.get_euclidean_params()
+            params_list += params
+        return params_list
+
+
+class HyperGRUCell(nn.Module):
+    def __init__(self, input_size, hidden_dim, activation='id', c=m.default_c):
+        super(HyperGRUCell, self).__init__()
+        self.input_size = input_size
+        self.hidden_dim = hidden_dim
+        self.c = c
+        self.activation = activation
+        # will have two biases instead of one per gate. It should
+        # be fine
+        self.Wr = Linear(hidden_dim, hidden_dim, c=self.c)
+        self.Ur = Linear(input_size, hidden_dim, c=self.c)
+        self.Wz = Linear(hidden_dim, hidden_dim, c=self.c)
+        self.Uz = Linear(input_size, hidden_dim, c=self.c)
+        self.W = SpecialLinear(hidden_dim, hidden_dim, c=self.c)
+        self.U = Linear(input_size, hidden_dim, c=self.c)
+
+    def forward(self, inp):
+        inp, prev = inp
+        rt_h = self.Wr(prev)
+        rt_x = self.Ur(inp)
+        rt_add = m.add(rt_h, rt_x, c=self.c)
+        rt_log = m.log_map_0(rt_add, self.c)
+        rt = torch.sigmoid(rt_log)
+        zt_h = self.Wz(prev)
+        zt_x = self.Uz(inp)
+        zt_add = m.add(zt_h, zt_x, self.c)
+        zt_log = m.log_map_0(zt_add, self.c)
+        zt = torch.sigmoid(zt_log)
+        ht_new_h = self.W(torch.diag_embed(rt), prev)
+        ht_new_x = self.U(inp)
+        ht_new = m.add(ht_new_h, ht_new_x, self.c)
+        res1 = m.add(-prev, ht_new, self.c)
+        res2 = m.matmul(torch.diag_embed(zt), res1, self.c)
+        ht = m.add(prev, res2, self.c)
+        res = activations_dict[self.activation](ht, self.c)
+        return res
+
+    def layers(self):
+        for mod in self.modules():
+            if mod != self:
+                yield mod
+
+    def get_hyperbolic_params(self):
+        """Get list of hyperbolic params"""
+        bias_params = []
+        for layer in self.layers():
+            params = layer.get_hyperbolic_params()
+            bias_params += params
+        return bias_params
+
+    def get_euclidean_params(self):
+        params_list = []
+        for layer in self.layers():
             params = layer.get_euclidean_params()
             params_list += params
         return params_list
@@ -252,3 +326,37 @@ class HyperRNN(nn.Module):
 
     def get_euclidean_params(self, lr=0.001):
         return self.rnn_cell.get_euclidean_params()
+
+
+class HyperGRU(nn.Module):
+    def __init__(self, input_size, hidden_size, activation='id',
+                 c=m.default_c):
+        super(HyperGRU, self).__init__()
+        self.hidden_size = hidden_size
+        self.input_size = input_size
+        self.activation = activation
+        self.c = c
+        self.rnn_cell = HyperGRUCell(
+            self.input_size,
+            self.hidden_size,
+            activation=self.activation,
+            c=self.c)
+
+    def forward(self, inp):
+        x, h0 = inp
+        tsteps = x.size(-2)
+        prev_h = h0
+        for t in range(tsteps):
+            inp_cell = x[:, t, :]
+            prev_h = self.rnn_cell((inp_cell, prev_h))
+        return prev_h
+
+    def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
+        """Get list of hyperbolic params"""
+        return self.rnn_cell.get_hyperbolic_params()
+
+    def get_euclidean_params(self, lr=0.001):
+        return self.rnn_cell.get_euclidean_params()
+
+
+_rnns = {'RNN': HyperRNN, 'GRU': HyperGRU}

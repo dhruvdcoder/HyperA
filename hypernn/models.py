@@ -96,6 +96,7 @@ class ConcatRNN(nn.Module):
                  hidden_dim,
                  num_classes,
                  c,
+                 rnn='RNN',
                  freeze_emb=False,
                  emb_size=None,
                  init_avg_norm=None):
@@ -123,7 +124,9 @@ class ConcatRNN(nn.Module):
                 sparse=False,
                 init_avg_norm=init_avg_norm)
         # Stacks the 2 matrices in the timestep dimension (NxWxV - W dimension)
-        self.rnn = hnn.HyperRNN(self.emb_size, self.hidden_dim)
+        self.rnn_type = rnn
+        logger.info("Using {} cell...".format(rnn))
+        self.rnn = hnn._rnns[rnn](self.emb_size, self.hidden_dim)
         self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
 
     def forward(self, inp):
@@ -176,6 +179,7 @@ class AddRNN(nn.Module):
                  hidden_dim,
                  num_classes,
                  c,
+                 rnn='RNN',
                  freeze_emb=False,
                  emb_size=None,
                  init_avg_norm=None):
@@ -203,10 +207,11 @@ class AddRNN(nn.Module):
                 sparse=False,
                 init_avg_norm=init_avg_norm)
         # Stacks the 2 matrices in the timestep dimension (NxWxV - W dimension)
-        self.rnnp = hnn.HyperRNN(self.emb_size, self.hidden_dim)
-        self.rnnh = hnn.HyperRNN(self.emb_size, self.hidden_dim)
-        self.combinep = hnn.Linear(
-            self.hidden_dim, self.hidden_dim, bias=False)
+        self.rnn_type = rnn
+        logger.info("Using {} cell...".format(rnn))
+        self.rnnp = hnn._rnns[rnn](self.emb_size, self.hidden_dim)
+        self.rnnh = hnn._rnns[rnn](self.emb_size, self.hidden_dim)
+        self.combinep = hnn.Linear(self.hidden_dim, self.hidden_dim, bias=True)
         self.combineh = hnn.Linear(self.hidden_dim, self.hidden_dim, bias=True)
         self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
 
@@ -237,7 +242,9 @@ class AddRNN(nn.Module):
 
     def get_euclidean_params(self, lr=0.001):
         params_list = []
-        for layer in [self.rnn, self.logits]:
+        for layer in [
+                self.rnnp, self.rnnh, self.combinep, self.combineh, self.logits
+        ]:
             params = layer.get_euclidean_params()
             params_list += params
 
@@ -253,8 +260,17 @@ class AddRNN(nn.Module):
                 'lr': emb_lr
             })
         bias_params = []
-        for layer in [self.rnn, self.logits]:
+        for layer in [
+                self.rnnp, self.rnnh, self.combinep, self.combineh, self.logits
+        ]:
             params = layer.get_hyperbolic_params()
             bias_params += params
         hyp_params.append({'params': bias_params, 'lr': bias_lr})
         return hyp_params
+
+
+model_zoo = {
+    'hconcatrnn': ConcatRNN,
+    'hdeepavg': HyperDeepAvgNet,
+    'haddrnn': AddRNN
+}

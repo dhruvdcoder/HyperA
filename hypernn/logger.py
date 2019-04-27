@@ -1,6 +1,6 @@
 """Creates logging instances to log for tensorboard vis"""
 
-import config
+import hypernn.config as config
 import tensorboardX as tb
 import logging
 logger = logging.getLogger(__file__)
