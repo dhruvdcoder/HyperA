@@ -1,7 +1,7 @@
 from hypernn import config
 import torchtext.data as data
 import torchtext
-import hypernn.embeddings as pretrained_embs
+#import hypernn.embeddings as pretrained_embs
 import torch
 import logging
 logger = logging.getLogger(__name__)
