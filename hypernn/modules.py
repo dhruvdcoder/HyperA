@@ -256,7 +256,7 @@ class HyperRNN(nn.Module):
 
 
 class HyperGRUCell(nn.Module):
-    def __init__(self, input_size, hidden_size, c=m.default_c):
+    def __init__(self, input_size, hidden_size, activation='id', c=m.default_c):
         super(HyperGRUCell, self).__init__()
         self.l_inp_z = Linear(input_size, hidden_size, bias=False)
         self.l_hid_z = Linear(hidden_size, hidden_size)
@@ -267,6 +267,7 @@ class HyperGRUCell(nn.Module):
         self.l_inp_h = Linear(input_size, hidden_size, bias=False)
         self.l_hid_h = Linear(hidden_size, hidden_size)
 
+        self.activation = activation
         self.c = c
 
     def forward(self, inp_tuple):
@@ -278,7 +279,9 @@ class HyperGRUCell(nn.Module):
 
         z = m.sigmoid(m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
         r = m.sigmoid(m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
-        temp_activ = m.tanh(m.add(self.l_inp_h(inp), m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c), c=self.c), c=self.c)
+        temp_activ = activations_dict[self.activation]
+            (m.add(self.l_inp_h(inp), m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c), c=self.c),
+                c=self.c)
 
         # There are 2 version of final state calculation, based on whether you want to use
         # (1 - z) on previous state or h'
@@ -309,18 +312,18 @@ class HyperGRUCell(nn.Module):
         return params_list
 
 class HyperGRU(nn.Module):
-    def __init__(self, input_size, hidden_size, c=m.default_c):
+    def __init__(self, input_size, hidden_size, activation='id', c=m.default_c):
         super(HyperGRU, self).__init__()
         self.hidden_size = hidden_size
         self.input_size = input_size
         self.c = c
-        self.gru_cell = HyperGRUCell(hidden_size, input_size, self.c)
+        self.gru_cell = HyperGRUCell(hidden_size, input_size, activation=activation, c=self.c)
 
     def forward(self, inp):
         # Assert that inp.dimension is of form (NxWxE)
         # assert (inp)
         # h0 = torch.zeros(inp.size()[0], self.hidden_size).double()
-        
+
         x, h0 = inp
         tsteps = x.size()[-2]
         prev_h = h0
