@@ -19,6 +19,10 @@ def int_or_None(inp):
         return int(inp)
 
 
+model_zoo = ['hconcatrnn', 'hdeepavg', 'haddrnn']
+rnns = ['RNN', 'GRU']
+
+
 def get_args():
     parser = argparse.ArgumentParser(
         description='To level config for the HyperA project')
@@ -84,6 +88,7 @@ def get_args():
         ' or doing test.')
     parser.add_argument(
         '--epochs', type=int, default=10, help='Number of epochs')
+    parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument(
         '--save_dir',
         type=Path,
@@ -124,7 +129,20 @@ def get_args():
         action='store_true',
         default=True,
         help='Debug using tensorboard')
-    args, _ = parser.parse_known_args()
+    parser.add_argument(
+        '--model',
+        default='hconcatrnn',
+        choices=model_zoo,
+        help='/'.join(model_zoo))
+    parser.add_argument(
+        '--rnn', default='RNN', choices=rnns, help='/'.join(rnns))
+    parser.add_argument('--hidden_dim', type=int, default=50)
+    parser.add_argument('--hyp_bias_lr', type=float, default=0.01)
+    parser.add_argument('--hyp_emb_lr', type=float, default=0.1)
+    parser.add_argument('--euc_lr', type=float, default=0.001)
+    parser.add_argument('--print_every', type=int, default=5)
+    parser.add_argument('--val_every', type=int, default=500)
+    args = parser.parse_args()
     return args
 
 

@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import hypernn.ops.mobius as m
 import math
-from logger import TensorboardLoggingMixin
 
 
 class Linear(nn.Module):
@@ -27,9 +26,10 @@ class Linear(nn.Module):
         # mode is fan_out because out weight is transpose of the weight of usual
         # linear layer
         if self.bias is not None:
-            fan_in = self.weight.size(0)
-            bound = 1 / math.sqrt(fan_in)
-            nn.init.uniform_(self.bias, -bound, bound)
+            #fan_in = self.weight.size(0)
+            #bound = 1 / math.sqrt(fan_in)
+            #nn.init.uniform_(self.bias, -bound, bound)
+            nn.init.zeros_(self.bias)
 
     def forward(self, inp):
         out = m.matmul(self.weight, inp, self.c)
@@ -51,6 +51,22 @@ class Linear(nn.Module):
             return []
         else:
             return [self.bias]
+
+
+class SpecialLinear(Linear):
+    """ Designed to apply W.M * x ++ b
+    (.) being euclidean matmul (*) being hyperbolic matmul
+    (++) being mobius add
+    """
+
+    def forward(self, M, inp):
+        assert M.size(-1) == self.weight.size(0)
+        assert M.size(-1) == M.size(-2)  # Should be square
+        mat = torch.matmul(M, self.weight)
+        out = m.matmul(mat, inp, self.c)
+        if self.bias is not None:
+            out = m.add(out, self.bias.unsqueeze(0), self.c)
+        return out
 
 
 activations_dict = {'tanh': m.tanh, 'relu': m.relu, 'id': m.id}
@@ -193,7 +209,7 @@ class HyperRNNCell(nn.Module):
         super(HyperRNNCell, self).__init__()
         self.input_size = input_size
         self.hidden_dim = hidden_dim
-        self.l_ih = Linear(input_size, hidden_dim, bias=False)
+        self.l_ih = Linear(input_size, hidden_dim)
         self.l_hh = Linear(hidden_dim, hidden_dim)
         self.c = c
         self.activation = activation
@@ -224,7 +240,6 @@ class HyperRNNCell(nn.Module):
             params_list += params
         return params_list
 
-
 class HyperRNN(nn.Module):
     def __init__(self, input_size, hidden_size, activation='id',
                  c=m.default_c):
@@ -253,7 +268,6 @@ class HyperRNN(nn.Module):
 
     def get_euclidean_params(self, lr=0.001):
         return self.rnn_cell.get_euclidean_params()
-
 
 class HyperGRUCell(nn.Module):
     def __init__(self, input_size, hidden_size, activation='id', c=m.default_c):
@@ -340,3 +354,6 @@ class HyperGRU(nn.Module):
 
     def get_euclidean_params(self, lr=0.001):
         return self.gru_cell.get_euclidean_params()
+
+
+_rnns = {'RNN': HyperRNN, 'GRU': HyperGRU}
