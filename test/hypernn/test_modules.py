@@ -151,12 +151,31 @@ def test_RNN_grad():
     for i in range(1):
         test_case()
 
+def test_GRU_grad():
+    hidden_size = 100
+    emb_size = 100
+    batch_size = 2
+    timesteps = 3
+
+    hnn_rnn = hnn.HyperGRU(emb_size, hidden_size).double()
+
+    def test_case():
+        x = torch.tensor(
+            np_utils.random_vec((batch_size, timesteps, emb_size)),
+            requires_grad=True).double()
+        torch.autograd.gradcheck(hnn_rnn, x)
+
+    for i in range(1):
+        test_case()
+
 
 if __name__ == '__main__':
     #test_Linear_forward()
     # test_Dense()
     # m.set_float(32)
-    with detect_anomaly():
-        test_RNN_grad()
+    # with detect_anomaly():
+    #     test_RNN_grad()
+    # test_RNN_grad()
+    test_GRU_grad()
     # test_Linear_grad()
     # test_Dense_grad()

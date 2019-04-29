@@ -152,6 +152,20 @@ def matmul(M, x, c, dim=-1):
     return project_in_ball(res, c, dim=dim)
 
 
+def pointwise_prod(x, u, c, dim=-1):
+    """
+    Hadamard (Pointwise product) in Hyperbolic space
+    Refer to GRU implementation in original paper
+    """
+    x += perterb
+    prod = x * u + perterb
+    prod_n = norm(prod, dim=dim)
+    x_n = norm(x, dim=dim)
+    sqrt_c = sqrt(c)
+    result = 1. / sqrt_c * clipped_tanh(prod_n / x_n * atanh(sqrt_c * x_n)) / prod_n * prod
+    return project_in_ball(result, c, dim)
+
+
 def sum(x, c, dim=-2):
     """Not starightforward to vectorize add.
     Hence we loop
@@ -261,6 +275,8 @@ def activation(x, function, c):
     """
     return exp_map_0(function(log_map_0(x, c)), c)
 
+def hyp_to_eucl_activation(x, function, c):
+    return function(log_map_0(x, c))
 
 def relu(x, c):
     return activation(x, torch.nn.functional.relu, c)
@@ -268,6 +284,12 @@ def relu(x, c):
 
 def tanh(x, c):
     return activation(x, torch.tanh, c)
+
+def sigmoid(x, c):
+    return activation(x, torch.sigmoid, c)
+
+def sigmoid_hyp_to_eucl(x, c):
+    return hyp_to_eucl_activation(x, torch.sigmoid, c)
 
 
 def id(x, c):

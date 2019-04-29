@@ -268,9 +268,88 @@ class AddRNN(nn.Module):
         hyp_params.append({'params': bias_params, 'lr': bias_lr})
         return hyp_params
 
+class ConcatGRU(nn.Module):
+    def __init__(self,
+                 torchtext_vocab,
+                 hidden_dim,
+                 num_classes,
+                 c,
+                 freeze_emb=False,
+                 emb_size=None,
+                 init_avg_norm=None):
+        super(ConcatGRU, self).__init__()
+        if torchtext_vocab.vectors is not None:
+            self.emb_size = torchtext_vocab.vectors.size(1)
+        else:
+            self.emb_size = emb_size
+        logger.info("Emb size: {}".format(self.emb_size))
+        self.vocab_size = len(torchtext_vocab)
+        logger.info("vocab_size :{}".format(self.vocab_size))
+        self.hidden_dim = hidden_dim
+        logger.info("hidden_dim :{}".format(self.hidden_dim))
+        self.num_classes = num_classes
+        self.freeze_emb = freeze_emb
+        self.c = c
+        if torchtext_vocab.vectors is not None:
+            self.emb = hnn.HyperEmbeddings.from_torchtext_vocab(
+                torchtext_vocab, self.c, sparse=False, freeze=freeze_emb)
+        else:
+            self.emb = hnn.HyperEmbeddings(
+                self.vocab_size,
+                self.emb_size,
+                padding_idx=1,
+                sparse=False,
+                init_avg_norm=init_avg_norm)
+        # Stacks the 2 matrices in the timestep dimension (NxWxV - W dimension)
+        self.gru = hnn.HyperGRU(self.emb_size, self.hidden_dim)
+        self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
+
+    def forward(self, inp):
+        premise, hypothesis = inp
+
+        # Project to Hyperbolic embedding space
+        premise_emb = self.emb(premise)
+        hypothesis_emb = self.emb(hypothesis)
+        #rolled_vector = self.cat(premise_emb, hypothesis_emb)
+        rolled_vector = torch.cat((premise_emb, hypothesis_emb), -2)
+        #h0 = torch.zeros(rolled_vector.size(0), self.hidden_dim).double()
+        h0 = torch.zeros(
+            rolled_vector.size(0),
+            self.hidden_dim,
+            dtype=rolled_vector.dtype,
+            device=rolled_vector.device)
+        output = self.gru((rolled_vector, h0))
+        #output = self.gru(rolled_vector)
+        logits = self.logits(output)
+        return logits
+
+    def get_euclidean_params(self, lr=0.001):
+        params_list = []
+        for layer in [self.gru, self.logits]:
+            params = layer.get_euclidean_params()
+            params_list += params
+
+        euc_params = [{'params': params_list, 'lr': lr}]
+        return euc_params
+
+    def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
+        """Get list of hyperbolic params"""
+        hyp_params = []
+        if self.emb.weight.requires_grad:
+            hyp_params.append({
+                'params': self.emb.get_hyperbolic_params(),
+                'lr': emb_lr
+            })
+        bias_params = []
+        for layer in [self.gru, self.logits]:
+            params = layer.get_hyperbolic_params()
+            bias_params += params
+        hyp_params.append({'params': bias_params, 'lr': bias_lr})
+        return hyp_params
 
 model_zoo = {
     'hconcatrnn': ConcatRNN,
     'hdeepavg': HyperDeepAvgNet,
-    'haddrnn': AddRNN
+    'haddrnn': AddRNN,
+    'hconcatgru': ConcatGRU,
 }
