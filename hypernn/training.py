@@ -17,7 +17,6 @@ logger = logging.getLogger(__file__)
 def default_params():
     return {'emb_lr': 0.1, 'bias_lr': 0.01, 'lr': 0.001}
 
-
 def train(model, data_gen, params):
     loss_op = nn.CrossEntropyLoss()
     hyp_param_gropus = model.get_hyperbolic_params(
@@ -94,8 +93,7 @@ def train_main(model,
                         loss.item(), train_acc))
                 # print the tensorboard
                 tb_logger.tb_logger.add_scalar('loss', loss.item(), iterations)
-                tb_logger.tb_logger.add_scalar('train_acc', train_acc,
-                                               iterations)
+                tb_logger.tb_logger.add_scalar('train_acc', train_acc, iterations)
             # checkpoint model periodically
             if iterations % save_every == 0:
                 snapshot_path = save_dir / 'snapshot_acc_{:.4f}_loss_{:.6f}_iter_{}_model_{}.pt'.format(

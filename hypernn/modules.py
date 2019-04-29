@@ -241,64 +241,6 @@ class HyperRNNCell(nn.Module):
         return params_list
 
 
-class HyperGRUCell(nn.Module):
-    def __init__(self, input_size, hidden_dim, activation='id', c=m.default_c):
-        super(HyperGRUCell, self).__init__()
-        self.input_size = input_size
-        self.hidden_dim = hidden_dim
-        self.c = c
-        self.activation = activation
-        # will have two biases instead of one per gate. It should
-        # be fine
-        self.Wr = Linear(hidden_dim, hidden_dim, c=self.c)
-        self.Ur = Linear(input_size, hidden_dim, c=self.c)
-        self.Wz = Linear(hidden_dim, hidden_dim, c=self.c)
-        self.Uz = Linear(input_size, hidden_dim, c=self.c)
-        self.W = SpecialLinear(hidden_dim, hidden_dim, c=self.c)
-        self.U = Linear(input_size, hidden_dim, c=self.c)
-
-    def forward(self, inp):
-        inp, prev = inp
-        rt_h = self.Wr(prev)
-        rt_x = self.Ur(inp)
-        rt_add = m.add(rt_h, rt_x, c=self.c)
-        rt_log = m.log_map_0(rt_add, self.c)
-        rt = torch.sigmoid(rt_log)
-        zt_h = self.Wz(prev)
-        zt_x = self.Uz(inp)
-        zt_add = m.add(zt_h, zt_x, self.c)
-        zt_log = m.log_map_0(zt_add, self.c)
-        zt = torch.sigmoid(zt_log)
-        ht_new_h = self.W(torch.diag_embed(rt), prev)
-        ht_new_x = self.U(inp)
-        ht_new = m.add(ht_new_h, ht_new_x, self.c)
-        res1 = m.add(-prev, ht_new, self.c)
-        res2 = m.matmul(torch.diag_embed(zt), res1, self.c)
-        ht = m.add(prev, res2, self.c)
-        res = activations_dict[self.activation](ht, self.c)
-        return res
-
-    def layers(self):
-        for mod in self.modules():
-            if mod != self:
-                yield mod
-
-    def get_hyperbolic_params(self):
-        """Get list of hyperbolic params"""
-        bias_params = []
-        for layer in self.layers():
-            params = layer.get_hyperbolic_params()
-            bias_params += params
-        return bias_params
-
-    def get_euclidean_params(self):
-        params_list = []
-        for layer in self.layers():
-            params = layer.get_euclidean_params()
-            params_list += params
-        return params_list
-
-
 class HyperRNN(nn.Module):
     def __init__(self, input_size, hidden_size, activation='id',
                  c=m.default_c):
@@ -318,6 +260,7 @@ class HyperRNN(nn.Module):
         for t in range(tsteps):
             inp_cell = x[:, t, :]
             prev_h = self.rnn_cell((inp_cell, prev_h))
+
         return prev_h
 
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
@@ -326,6 +269,79 @@ class HyperRNN(nn.Module):
 
     def get_euclidean_params(self, lr=0.001):
         return self.rnn_cell.get_euclidean_params()
+
+
+class HyperGRUCell(nn.Module):
+    def __init__(self, input_size, hidden_size, activation='id',
+                 c=m.default_c):
+        super(HyperGRUCell, self).__init__()
+        self.l_inp_z = Linear(input_size, hidden_size, bias=False)
+        self.l_hid_z = Linear(hidden_size, hidden_size)
+
+        self.l_inp_r = Linear(input_size, hidden_size, bias=False)
+        self.l_hid_r = Linear(hidden_size, hidden_size)
+
+        self.l_inp_h = Linear(input_size, hidden_size, bias=False)
+        self.l_hid_h = Linear(hidden_size, hidden_size)
+
+        self.activation = activation
+        self.c = c
+
+    def forward(self, inp_tuple):
+        inp, prev_h = inp_tuple
+
+        # GRU implementation following the wildml blog
+        # http://www.wildml.com/2015/10/
+        # recurrent-neural-network-tutorial-part-4-implementing-a-grulstm-rnn-with-python-and-theano/
+
+        # z = m.sigmoid(m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
+        # r = m.sigmoid(m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
+
+        z = m.sigmoid_hyp_to_eucl(
+            m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
+        r = m.sigmoid_hyp_to_eucl(
+            m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
+        temp_activ = activations_dict[self.activation](
+            m.add(
+                m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c),
+                self.l_inp_h(inp),
+                c=self.c),
+            c=self.c)
+
+        # There are 2 version of final state calculation, based on whether you want to use
+        # (1 - z) on previous state or h'
+        # They are:
+        # (1 - z) * h' + z * st-1 = z * (st-1 - h) + h'
+        # (1 - z) * st-1 + z * h' = z * (h' - st-1) + st-1
+
+        # We used the second version
+
+        minus_h = m.add(-prev_h, temp_activ, c=self.c)
+        h_next = m.add(
+            prev_h, m.pointwise_prod(minus_h, z, c=self.c), c=self.c)
+        # print (h_next.size())
+        return h_next
+
+    def get_hyperbolic_params(self, bias_lr=0.01):
+        """Get list of hyperbolic params"""
+        bias_params = []
+        for layer in [
+                self.l_inp_z, self.l_hid_z, self.l_inp_r, self.l_hid_r,
+                self.l_inp_h, self.l_hid_h
+        ]:
+            params = layer.get_hyperbolic_params()
+            bias_params += params
+        return bias_params
+
+    def get_euclidean_params(self, lr=0.001):
+        params_list = []
+        for layer in [
+                self.l_inp_z, self.l_hid_z, self.l_inp_r, self.l_hid_r,
+                self.l_inp_h, self.l_hid_h
+        ]:
+            params = layer.get_euclidean_params()
+            params_list += params
+        return params_list
 
 
 class HyperGRU(nn.Module):
@@ -334,29 +350,31 @@ class HyperGRU(nn.Module):
         super(HyperGRU, self).__init__()
         self.hidden_size = hidden_size
         self.input_size = input_size
-        self.activation = activation
         self.c = c
-        self.rnn_cell = HyperGRUCell(
-            self.input_size,
-            self.hidden_size,
-            activation=self.activation,
-            c=self.c)
+        self.gru_cell = HyperGRUCell(
+            hidden_size, input_size, activation=activation, c=self.c)
 
     def forward(self, inp):
+        # Assert that inp.dimension is of form (NxWxE)
+        # assert (inp)
+        # h0 = torch.zeros(inp.size()[0], self.hidden_size).double()
+
         x, h0 = inp
-        tsteps = x.size(-2)
+        tsteps = x.size()[-2]
         prev_h = h0
         for t in range(tsteps):
             inp_cell = x[:, t, :]
-            prev_h = self.rnn_cell((inp_cell, prev_h))
-        return prev_h
+            next_h = self.gru_cell((inp_cell, prev_h))
+            prev_h = next_h
+
+        return next_h
 
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
         """Get list of hyperbolic params"""
-        return self.rnn_cell.get_hyperbolic_params()
+        return self.gru_cell.get_hyperbolic_params()
 
     def get_euclidean_params(self, lr=0.001):
-        return self.rnn_cell.get_euclidean_params()
+        return self.gru_cell.get_euclidean_params()
 
 
 _rnns = {'RNN': HyperRNN, 'GRU': HyperGRU}
