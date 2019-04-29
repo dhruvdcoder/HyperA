@@ -275,6 +275,8 @@ def activation(x, function, c):
     """
     return exp_map_0(function(log_map_0(x, c)), c)
 
+def hyp_to_eucl_activation(x, function, c):
+    return function(log_map_0(x, c))
 
 def relu(x, c):
     return activation(x, torch.nn.functional.relu, c)
@@ -285,6 +287,9 @@ def tanh(x, c):
 
 def sigmoid(x, c):
     return activation(x, torch.sigmoid, c)
+
+def sigmoid_hyp_to_eucl(x, c):
+    return hyp_to_eucl_activation(x, torch.sigmoid, c)
 
 
 def id(x, c):

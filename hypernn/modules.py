@@ -291,10 +291,13 @@ class HyperGRUCell(nn.Module):
         # http://www.wildml.com/2015/10/
         # recurrent-neural-network-tutorial-part-4-implementing-a-grulstm-rnn-with-python-and-theano/
 
-        z = m.sigmoid(m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
-        r = m.sigmoid(m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
-        temp_activ = activations_dict[self.activation]
-            (m.add(self.l_inp_h(inp), m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c), c=self.c),
+        # z = m.sigmoid(m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
+        # r = m.sigmoid(m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
+
+        z = m.sigmoid_hyp_to_eucl(m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
+        r = m.sigmoid_hyp_to_eucl(m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
+        temp_activ = activations_dict[self.activation](
+            m.add(self.l_inp_h(inp), m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c), c=self.c),
                 c=self.c)
 
         # There are 2 version of final state calculation, based on whether you want to use

@@ -19,7 +19,7 @@ def int_or_None(inp):
         return int(inp)
 
 
-model_zoo = ['hconcatrnn', 'hdeepavg', 'haddrnn']
+model_zoo = ['hconcatrnn', 'hdeepavg', 'haddrnn', 'hconcatgru']
 rnns = ['RNN', 'GRU']
 
 
@@ -131,7 +131,7 @@ def get_args():
         help='Debug using tensorboard')
     parser.add_argument(
         '--model',
-        default='hconcatrnn',
+        default='hconcatgru',
         choices=model_zoo,
         help='/'.join(model_zoo))
     parser.add_argument(
