@@ -297,7 +297,7 @@ class HyperGRUCell(nn.Module):
         z = m.sigmoid_hyp_to_eucl(m.add(self.l_inp_z(inp), self.l_hid_z(prev_h), c=self.c), c=self.c)
         r = m.sigmoid_hyp_to_eucl(m.add(self.l_inp_r(inp), self.l_hid_r(prev_h), c=self.c), c=self.c)
         temp_activ = activations_dict[self.activation](
-            m.add(self.l_inp_h(inp), m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c), c=self.c),
+            m.add(m.pointwise_prod(self.l_hid_h(prev_h), r, c=self.c), self.l_inp_h(inp), c=self.c),
                 c=self.c)
 
         # There are 2 version of final state calculation, based on whether you want to use
@@ -309,7 +309,7 @@ class HyperGRUCell(nn.Module):
         # We used the second version
 
         minus_h = m.add(-prev_h, temp_activ, c=self.c)
-        h_next = m.add(-prev_h, m.pointwise_prod(minus_h, z, c=self.c), c=self.c)
+        h_next = m.add(prev_h, m.pointwise_prod(minus_h, z, c=self.c), c=self.c)
         # print (h_next.size())
         return h_next
 
