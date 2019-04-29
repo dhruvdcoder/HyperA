@@ -41,7 +41,7 @@ def train_main(model,
                num_epochs,
                optim_params,
                print_every=1000,
-               save_every=10000,
+               save_every=1000,
                val_every=10,
                save_dir=config.save_dir):
     train_itr, dev_itr, test_itr = data
@@ -62,7 +62,6 @@ def train_main(model,
         train_itr.init_epoch()
         n_correct, n_total = 0, 0
         for batch_idx, batch in enumerate(train_itr):
-
             model.train()
             eu_optim.zero_grad()
             hyp_optim.zero_grad()
