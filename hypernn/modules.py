@@ -277,14 +277,14 @@ class HyperGRUCell(nn.Module):
     def __init__(self, input_size, hidden_size, activation='id',
                  c=m.default_c):
         super(HyperGRUCell, self).__init__()
-        self.l_inp_z = Linear(input_size, hidden_size, bias=False)
-        self.l_hid_z = Linear(hidden_size, hidden_size, bias=False)
+        self.l_inp_z = Linear(input_size, hidden_size, bias=True)
+        self.l_hid_z = Linear(hidden_size, hidden_size, bias=True)
 
-        self.l_inp_r = Linear(input_size, hidden_size, bias=False)
-        self.l_hid_r = Linear(hidden_size, hidden_size, bias=False)
+        self.l_inp_r = Linear(input_size, hidden_size, bias=True)
+        self.l_hid_r = Linear(hidden_size, hidden_size, bias=True)
 
-        self.l_inp_h = Linear(input_size, hidden_size, bias=False)
-        self.l_hid_h = Linear(hidden_size, hidden_size, bias=False)
+        self.l_inp_h = Linear(input_size, hidden_size, bias=True)
+        self.l_hid_h = Linear(hidden_size, hidden_size, bias=True)
 
         self.activation = activation
         self.c = c

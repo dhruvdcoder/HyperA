@@ -193,7 +193,7 @@ def sum(x, c, dim=-2):
     #return project_in_ball(res, c=c, dim=dim)
     out_shape = list(x.size())
     out_shape.pop(dim)
-    acc = torch.zeros(out_shape, dtype=x.dtype)
+    acc = torch.zeros(out_shape, dtype=x.dtype, device=x.device)
     for seq_arr in torch.unbind(x, dim):
         # seq_arr will be of shape (batch, hidden)
         acc = add(acc, seq_arr, c)
