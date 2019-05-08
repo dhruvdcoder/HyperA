@@ -83,7 +83,7 @@ def squared_distance(a, b, c, dim=-1):
 
 
 def scalar_mul(r, a, c, dim=-1):
-    """dim(r) =(1,), dim(a)=batch, emb"""
+    """dim(r) =(1,) or (batch,1), dim(a)=batch, emb"""
     a = a + perterb
     norm_a = norm(a, dim=dim)
     sqrt_c = sqrt(c)
@@ -162,7 +162,8 @@ def pointwise_prod(x, u, c, dim=-1):
     prod_n = norm(prod, dim=dim)
     x_n = norm(x, dim=dim)
     sqrt_c = sqrt(c)
-    result = 1. / sqrt_c * clipped_tanh(prod_n / x_n * atanh(sqrt_c * x_n)) / prod_n * prod
+    result = 1. / sqrt_c * clipped_tanh(
+        prod_n / x_n * atanh(sqrt_c * x_n)) / prod_n * prod
     return project_in_ball(result, c, dim)
 
 
@@ -192,14 +193,14 @@ def sum(x, c, dim=-2):
     #return project_in_ball(res, c=c, dim=dim)
     out_shape = list(x.size())
     out_shape.pop(dim)
-    acc = torch.zeros(out_shape, dtype=x.dtype)
+    acc = torch.zeros(out_shape, dtype=x.dtype, device=x.device)
     for seq_arr in torch.unbind(x, dim):
         # seq_arr will be of shape (batch, hidden)
         acc = add(acc, seq_arr, c)
     return acc
 
 
-def mean(x, c, dim=-2):
+def mean(x, c, dim=-2, to_divide=None):
     """ 
     Arguments:
 
@@ -209,8 +210,17 @@ def mean(x, c, dim=-2):
         shape (batch, seq, hidden)
         and we will sum along seq by default
 
+        to_divide: tensor of shape (batch, 1). If supplied
+            result of every sum along the seq_dim is divided
+            by the corresponding entry in to_divide. If not
+            supplied then every entry is divided by seq_len
+
     """
     n = x.size(dim)
+    if to_divide is not None:
+        assert to_divide.size(0) == x.size(0)
+        assert to_divide.size(1) == 1
+        n = to_divide.type(x.dtype)
     s = sum(x, c, dim=dim)
 
     new_hidden_dim_idx = dim + 1
@@ -275,8 +285,10 @@ def activation(x, function, c):
     """
     return exp_map_0(function(log_map_0(x, c)), c)
 
+
 def hyp_to_eucl_activation(x, function, c):
     return function(log_map_0(x, c))
+
 
 def relu(x, c):
     return activation(x, torch.nn.functional.relu, c)
@@ -285,8 +297,10 @@ def relu(x, c):
 def tanh(x, c):
     return activation(x, torch.tanh, c)
 
+
 def sigmoid(x, c):
     return activation(x, torch.sigmoid, c)
+
 
 def sigmoid_hyp_to_eucl(x, c):
     return hyp_to_eucl_activation(x, torch.sigmoid, c)
@@ -317,3 +331,58 @@ def rnn_step(x, h_prev, w_h, w_x, b, c):
     hh = matmul(w_h, h_prev, c)
     xh = matmul(w_x, x, c)
     return add(add(hh, xh), b.unsqueeze(0))
+
+
+def single_query_attn_scores(key, query, c):
+    """
+    Arguments:
+
+        key: Hyperbolic key with shape (batch, seq, hidden_dim)
+
+        query: Hyperbolic query with shape (batch, hidden_dim)
+
+    Returns:
+
+        Scores as scalars in R with shape (batch,seq,1)
+
+    """
+    euclid_key = log_map_0(key, c)
+    euclid_query = log_map_0(query, c)
+    scores = torch.bmm(euclid_key, euclid_query.unsqueeze(-1))
+    denom = norm(euclid_key)  #shape (batch, seq,1)
+    scores = (1. / denom) * scores
+    return scores
+
+
+def single_query_attn(key, query, value, c, seq_lens=None):
+    """
+    Arguments:
+
+        key: Hyperbolic key with shape (batch, seq, hidden_dim)
+
+        query: Hyperbolic query with shape (batch, hidden_dim)
+
+        values: Hyperbolic value with shape (batch, seq, hidden_dim)
+
+        seq_lens: LongTensor of shape (batch,). Used for masking
+
+    Returns:
+
+        Attended value with shape (batch,seq, hidden_dim)
+
+    """
+    scores = single_query_attn_scores(key, query, c)  # shape (batch, seq, 1)
+    scaled_scores = torch.nn.functional.softmax(
+        scores, -2)  # softmax on seq dim (shape=same as scors)
+    if seq_lens is not None:
+        mask = torch.ones_like(scaled_scores).squeeze().type(
+            value.dtype).detach()
+        for id_in_batch, seq_len in enumerate(seq_lens):
+            mask[id_in_batch, seq_len:] = 0.
+        scaled_scores = scaled_scores.squeeze() * mask
+        # renormalize
+        _sums = scaled_scores.sum(-1, keepdim=True)  # sums per row
+        scaled_scores = scaled_scores.div(_sums).unsqueeze(-1)
+    scaled_scores = scaled_scores + perterb
+    out = scalar_mul(scaled_scores, value, c)
+    return out
