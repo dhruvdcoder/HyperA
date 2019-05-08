@@ -25,6 +25,6 @@ def pick_along_seq(t, indices, keepdims=False):
     res = torch.gather(
         t, 1,
         indices.view(-1, 1).unsqueeze(2).repeat(1, 1, hidden_dim))
-    if keepdims:
+    if not keepdims:
         res = res.squeeze(1)
     return res
