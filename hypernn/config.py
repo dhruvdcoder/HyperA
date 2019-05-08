@@ -19,7 +19,10 @@ def int_or_None(inp):
         return int(inp)
 
 
-model_zoo = ['hconcatrnn', 'hdeepavg', 'haddrnn', 'hconcatgru', 'addrnnattn']
+model_zoo = [
+    'hconcatrnn', 'hdeepavg', 'haddrnn', 'hconcatgru', 'addrnnattn',
+    'hdeepavgattn'
+]
 rnns = ['RNN', 'GRU']
 
 
@@ -149,6 +152,7 @@ def get_args():
     parser.add_argument('--euc_lr', type=float, default=0.001)
     parser.add_argument('--print_every', type=int, default=5)
     parser.add_argument('--val_every', type=int, default=500)
+    parser.add_argument('--debug_grad', action='store_true')
     args = parser.parse_args()
     return args
 

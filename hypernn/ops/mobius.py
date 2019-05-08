@@ -349,10 +349,12 @@ def single_query_attn_scores(key, query, c):
     euclid_key = log_map_0(key, c)
     euclid_query = log_map_0(query, c)
     scores = torch.bmm(euclid_key, euclid_query.unsqueeze(-1))
+    denom = norm(euclid_key)  #shape (batch, seq,1)
+    scores = (1. / denom) * scores
     return scores
 
 
-def single_query_attn(key, query, value, c):
+def single_query_attn(key, query, value, c, seq_lens=None):
     """
     Arguments:
 
@@ -362,6 +364,8 @@ def single_query_attn(key, query, value, c):
 
         values: Hyperbolic value with shape (batch, seq, hidden_dim)
 
+        seq_lens: LongTensor of shape (batch,). Used for masking
+
     Returns:
 
         Attended value with shape (batch,seq, hidden_dim)
@@ -370,5 +374,15 @@ def single_query_attn(key, query, value, c):
     scores = single_query_attn_scores(key, query, c)  # shape (batch, seq, 1)
     scaled_scores = torch.nn.functional.softmax(
         scores, -2)  # softmax on seq dim (shape=same as scors)
-    out = scalar_mul(scaled_scores, value)
+    if seq_lens is not None:
+        mask = torch.ones_like(scaled_scores).squeeze().type(
+            value.dtype).detach()
+        for id_in_batch, seq_len in enumerate(seq_lens):
+            mask[id_in_batch, seq_len:] = 0.
+        scaled_scores = scaled_scores.squeeze() * mask
+        # renormalize
+        _sums = scaled_scores.sum(-1, keepdim=True)  # sums per row
+        scaled_scores = scaled_scores.div(_sums).unsqueeze(-1)
+    scaled_scores = scaled_scores + perterb
+    out = scalar_mul(scaled_scores, value, c)
     return out

@@ -395,8 +395,9 @@ class HyperDeepAvgNetAttn(nn.Module):
                  c,
                  freeze_emb=True,
                  emb_size=None,
-                 init_avg_norm=None):
-        super(HyperDeepAvgNet, self).__init__()
+                 init_avg_norm=None,
+                 **kwargs):
+        super(HyperDeepAvgNetAttn, self).__init__()
         logger.info("Creating HyperDeepAvgNet .. ")
         if torchtext_vocab.vectors is not None:
             self.emb_size = torchtext_vocab.vectors.size(1)
@@ -422,23 +423,27 @@ class HyperDeepAvgNetAttn(nn.Module):
                 init_avg_norm=init_avg_norm)
         self.dense_premise = hnn.Dense(self.emb_size, hidden_dim, c=c)
         self.dense_hypothesis = hnn.Dense(self.emb_size, hidden_dim, c=c)
-        self.const_bias_param = torch.nn.Parameter(torch.Tensor(hidden_dim))
-        torch.nn.init.zeros_(self.const_bias_param)
+        #self.const_bias_param = torch.nn.Parameter(torch.Tensor(hidden_dim))
+        #torch.nn.init.zeros_(self.const_bias_param)
         self.dense_combine = hnn.Dense(
             2 * self.hidden_dim, self.hidden_dim, c=c)
         self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
 
     def forward(self, inp):
-        premise, hypothesis = inp
+        (premise, p_sent_len), (hypothesis, h_sent_len) = inp
         premise_emb = self.emb(premise)
         hypothesis_emb = self.emb(hypothesis)
-        premise_rep = self.dense_premise(m.mean(premise_emb, self.c, dim=-2))
-        hypothesis_rep = self.dense_hypothesis(
-            m.mean(hypothesis_emb, self.c, dim=-2))
-        batch_size = hypothesis_rep.size(0)
-        seq_len = hypothesis_rep.size(1)
-        const = torch.repeat(batch_size, seq_len, 1)
-        values = torch.cat((hypothesis_emb, const), -1)
+        hypothesis_query = m.mean(
+            hypothesis_emb, self.c, dim=-2, to_divide=h_sent_len.unsqueeze(1))
+        premise_attn = m.single_query_attn(premise_emb, hypothesis_query,
+                                           premise_emb, self.c, p_sent_len)
+        premise_rep = self.dense_premise(
+            m.mean(
+                premise_attn,
+                self.c,
+                dim=-2,
+                to_divide=p_sent_len.unsqueeze(1)))
+        hypothesis_rep = self.dense_hypothesis(hypothesis_query)
         concat_rep = torch.cat((premise_rep, hypothesis_rep), -1)
         logits = self.logits(self.dense_combine(concat_rep))
         return logits
@@ -579,5 +584,6 @@ model_zoo = {
     'hdeepavg': HyperDeepAvgNet,
     'haddrnn': AddRNN,
     'hconcatgru': ConcatGRU,
-    'addrnnattn': AddRNNAttn
+    'addrnnattn': AddRNNAttn,
+    'hdeepavgattn': HyperDeepAvgNetAttn
 }
