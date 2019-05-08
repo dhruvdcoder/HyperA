@@ -20,7 +20,7 @@ def pick_along_seq(t, indices, keepdims=False):
     """
     assert len(t.shape) == 3
     assert len(indices.shape) == 1
-    assert indices.size(0) == t.size(1)
+    assert indices.size(0) == t.size(0)
     hidden_dim = t.size(2)
     res = torch.gather(
         t, 1,

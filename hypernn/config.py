@@ -169,6 +169,7 @@ experiment_dir = cmd_args.experiment_dir or get_exp_dir(
 
 experiment_dir.mkdir(parents=True, exist_ok=True)
 
+params_file = experiment_dir / 'params'
 # setup root logger
 file_log_handler = logging.FileHandler(experiment_dir / "run.log")
 console_log_handler = logging.StreamHandler(sys.stdout)
