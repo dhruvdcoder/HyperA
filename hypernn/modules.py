@@ -257,11 +257,13 @@ class HyperRNN(nn.Module):
         #h0 = torch.zeros(x.size(0), self.hidden_size).double()
         tsteps = x.size(-2)
         prev_h = h0
+        hidden_states = []
         for t in range(tsteps):
             inp_cell = x[:, t, :]
             prev_h = self.rnn_cell((inp_cell, prev_h))
-
-        return prev_h
+            hidden_states.append(prev_h)
+            hidden = torch.stack(hidden_states, -2)
+        return hidden
 
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
         """Get list of hyperbolic params"""
@@ -276,13 +278,13 @@ class HyperGRUCell(nn.Module):
                  c=m.default_c):
         super(HyperGRUCell, self).__init__()
         self.l_inp_z = Linear(input_size, hidden_size, bias=False)
-        self.l_hid_z = Linear(hidden_size, hidden_size)
+        self.l_hid_z = Linear(hidden_size, hidden_size, bias=False)
 
         self.l_inp_r = Linear(input_size, hidden_size, bias=False)
-        self.l_hid_r = Linear(hidden_size, hidden_size)
+        self.l_hid_r = Linear(hidden_size, hidden_size, bias=False)
 
         self.l_inp_h = Linear(input_size, hidden_size, bias=False)
-        self.l_hid_h = Linear(hidden_size, hidden_size)
+        self.l_hid_h = Linear(hidden_size, hidden_size, bias=False)
 
         self.activation = activation
         self.c = c
@@ -362,12 +364,14 @@ class HyperGRU(nn.Module):
         x, h0 = inp
         tsteps = x.size()[-2]
         prev_h = h0
+        hidden_states = []
         for t in range(tsteps):
             inp_cell = x[:, t, :]
             next_h = self.gru_cell((inp_cell, prev_h))
             prev_h = next_h
-
-        return next_h
+            hidden_states.append(next_h)
+        hidden = torch.stack(hidden_states, -2)  # stack along the seq dim
+        return hidden
 
     def get_hyperbolic_params(self, emb_lr=0.1, bias_lr=0.01):
         """Get list of hyperbolic params"""

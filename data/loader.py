@@ -19,7 +19,13 @@ def prepare_multiNLI(return_test_set=False,
     logger.info('Batch_size: {}'.format(batch_size))
     # prep the field types
     inputs = data.Field(
-        lower=True, tokenize='spacy', batch_first=True, fix_length=max_seq_len)
+        lower=True,
+        tokenize='spacy',
+        batch_first=True,
+        init_token='<sos>',
+        eos_token='<eos>',
+        fix_length=max_seq_len,
+        include_lengths=True)
     answers = data.LabelField(batch_first=True)
 
     test_set = config.cmd_args.test_set

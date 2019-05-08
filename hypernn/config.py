@@ -19,7 +19,7 @@ def int_or_None(inp):
         return int(inp)
 
 
-model_zoo = ['hconcatrnn', 'hdeepavg', 'haddrnn', 'hconcatgru']
+model_zoo = ['hconcatrnn', 'hdeepavg', 'haddrnn', 'hconcatgru', 'addrnnattn']
 rnns = ['RNN', 'GRU']
 
 
