@@ -136,6 +136,13 @@ def get_args():
         help='/'.join(model_zoo))
     parser.add_argument(
         '--rnn', default='RNN', choices=rnns, help='/'.join(rnns))
+    parser.add_argument(
+        '--combine_op',
+        default='add',
+        choices=['add', 'concat'],
+        help=
+        'Method used to combine the reps of premise and hypo when using model "haddrnn".'
+    )
     parser.add_argument('--hidden_dim', type=int, default=50)
     parser.add_argument('--hyp_bias_lr', type=float, default=0.01)
     parser.add_argument('--hyp_emb_lr', type=float, default=0.1)

@@ -191,7 +191,9 @@ class AddRNN(nn.Module):
                  rnn='RNN',
                  freeze_emb=False,
                  emb_size=None,
-                 init_avg_norm=None):
+                 init_avg_norm=None,
+                 combine_op='add',
+                 **kwargs):
         super(AddRNN, self).__init__()
         if torchtext_vocab.vectors is not None:
             self.emb_size = torchtext_vocab.vectors.size(1)
@@ -222,10 +224,30 @@ class AddRNN(nn.Module):
         self.rnnh = hnn._rnns[rnn](self.emb_size, self.hidden_dim)
         self.combinep = hnn.Linear(self.hidden_dim, self.hidden_dim, bias=True)
         self.combineh = hnn.Linear(self.hidden_dim, self.hidden_dim, bias=True)
-        self.logits = hnn.Logits(hidden_dim, num_classes, c=c)
+        self.combine_op = combine_op
+        if combine_op == 'add':
+            logits_input_dim = hidden_dim
+        elif combine_op == 'concat':
+            logits_input_dim = 2 * hidden_dim
+        else:
+            raise ValueError("Invalid combine_op")
+        self.logits = hnn.Logits(logits_input_dim, num_classes, c=c)
+
+    def _add_combine(self, p, h):
+        return m.add(p, h, self.c)
+
+    def _concat_combine(self, p, h):
+        return torch.cat((p, h), -1)
+
+    def combine(self, p, h):
+        if self.combine_op == 'add':
+            rep = self._add_combine(p, h)
+        else:
+            rep = self._concat_combine(p, h)
+        return rep
 
     def forward(self, inp):
-        premise, hypothesis = inp
+        (premise, p_sent_len), (hypothesis, h_sent_len) = inp
 
         # Project to Hyperbolic embedding space
         premise_emb = self.emb(premise)
@@ -241,11 +263,17 @@ class AddRNN(nn.Module):
             self.hidden_dim,
             dtype=hypothesis_emb.dtype,
             device=hypothesis_emb.device)
-        outputp = self.rnnp((premise_emb, h0p))[:, -1, :]
-        outputh = self.rnnh((hypothesis_emb, h0h))[:, -1, :]
+        #outputp = self.rnnp((premise_emb, h0p))[:, -1, :]
+        outputp = pick_along_seq(
+            self.rnnp((premise_emb, h0p)),
+            p_sent_len - 1)  # keep this -1 if using <eos>
+        #outputh = self.rnnh((hypothesis_emb, h0h))[:, -1, :]
+        outputh = pick_along_seq(
+            self.rnnh((hypothesis_emb, h0h)),
+            h_sent_len - 1)  # keep this -1 if using <eos>
         p_rep = self.combinep(outputp)
-        h_rep = self.combinep(outputh)
-        rep = m.add(p_rep, h_rep, self.c)
+        h_rep = self.combineh(outputh)
+        rep = self.combine(p_rep, h_rep)
         logits = self.logits(rep)
         return logits
 
