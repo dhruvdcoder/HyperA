@@ -19,7 +19,6 @@ def prepare_multiNLI(return_test_set=False,
     logger.info('Batch_size: {}'.format(batch_size))
     # prep the field types
 
-
     inputs = data.Field(
         lower=True,
         tokenize='spacy',
@@ -28,7 +27,6 @@ def prepare_multiNLI(return_test_set=False,
         eos_token='<eos>',
         fix_length=max_seq_len,
         include_lengths=True)
-        seq_len_fix
     answers = data.LabelField(batch_first=True)
 
     test_set = config.cmd_args.test_set
@@ -85,10 +83,9 @@ def prepare_multiNLI(return_test_set=False,
             (train, dev, test), batch_size=batch_size, device=device)
 
     if return_test_set == True:
-        return (train_iter, dev_iter, test_iter), inputs,answers
+        return (train_iter, dev_iter, test_iter), inputs, answers
     else:
         return (train_iter, dev_iter, test_iter), inputs
-
 
 
 def get_vocab(load_test_set):
