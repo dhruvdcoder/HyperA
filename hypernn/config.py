@@ -19,7 +19,10 @@ def int_or_None(inp):
         return int(inp)
 
 
-model_zoo = ['hconcatrnn', 'hdeepavg', 'haddrnn', 'hconcatgru']
+model_zoo = [
+    'hconcatrnn', 'hdeepavg', 'haddrnn', 'hconcatgru', 'addrnnattn',
+    'hdeepavgattn'
+]
 rnns = ['RNN', 'GRU']
 
 
@@ -136,12 +139,20 @@ def get_args():
         help='/'.join(model_zoo))
     parser.add_argument(
         '--rnn', default='RNN', choices=rnns, help='/'.join(rnns))
+    parser.add_argument(
+        '--combine_op',
+        default='add',
+        choices=['add', 'concat'],
+        help=
+        'Method used to combine the reps of premise and hypo when using model "haddrnn".'
+    )
     parser.add_argument('--hidden_dim', type=int, default=50)
     parser.add_argument('--hyp_bias_lr', type=float, default=0.01)
     parser.add_argument('--hyp_emb_lr', type=float, default=0.1)
     parser.add_argument('--euc_lr', type=float, default=0.001)
     parser.add_argument('--print_every', type=int, default=5)
     parser.add_argument('--val_every', type=int, default=500)
+    parser.add_argument('--debug_grad', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -162,6 +173,7 @@ experiment_dir = cmd_args.experiment_dir or get_exp_dir(
 
 experiment_dir.mkdir(parents=True, exist_ok=True)
 
+params_file = experiment_dir / 'params'
 # setup root logger
 file_log_handler = logging.FileHandler(experiment_dir / "run.log")
 console_log_handler = logging.StreamHandler(sys.stdout)
