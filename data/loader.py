@@ -18,8 +18,8 @@ def prepare_multiNLI(return_test_set=False,
     logger.info('Using max_seq_len ={}'.format(max_seq_len))
     logger.info('Batch_size: {}'.format(batch_size))
     # prep the field types
-    inputs = data.Field(
-        lower=True, tokenize='spacy', batch_first=True, fix_length=max_seq_len)
+    inputs = data.Field(lower=True, tokenize='spacy', batch_first=True, fix_length=max_seq_len)
+
     answers = data.LabelField(batch_first=True)
 
     test_set = config.cmd_args.test_set
@@ -75,7 +75,11 @@ def prepare_multiNLI(return_test_set=False,
         train_iter, dev_iter, test_iter = data.BucketIterator.splits(
             (train, dev, test), batch_size=batch_size, device=device)
 
-    return (train_iter, dev_iter, test_iter), inputs
+    if return_test_set == True:
+        return (train_iter, dev_iter, test_iter), inputs,answers
+    else:
+        return (train_iter, dev_iter, test_iter), inputs
+
 
 
 def get_vocab(load_test_set):
