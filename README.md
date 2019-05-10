@@ -116,8 +116,7 @@ optional arguments:
 For instance, to train hyperbolic GRU, execute the following:
 
 ```
-$ python hypernn/training.py --mainlogdir logs --experiment hyper_gru_5_5 --tb_debug --emb_size 5 --hidden_dim 5 --hyp_bias_lr 0.01 --hyp_emb_l
-r 0.2 --emb_init_avg_norm 0.0005 --epochs 30 --model haddrnn --batch_size 512 --print_every 50 --device gpu
+$ python hypernn/training.py --mainlogdir logs --experiment hyper_gru_5_5 --tb_debug --emb_size 5 --hidden_dim 5 --hyp_bias_lr 0.01 --hyp_emb_lr 0.2 --emb_init_avg_norm 0.0005 --epochs 30 --model haddrnn --rnn GRU --batch_size 512 --print_every 50 --device gpu
 ```
 
 ## 4. Extract predictions from the test set using a trained model
