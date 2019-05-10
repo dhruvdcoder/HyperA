@@ -1,0 +1,3 @@
+For baseline results, run baseline_lstm_attention.ipynb Colab notebook.
+The default model is GRU with attention.
+Change config cell to add or remove attention.
