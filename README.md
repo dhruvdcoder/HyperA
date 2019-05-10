@@ -120,7 +120,14 @@ $ python hypernn/training.py --mainlogdir logs --experiment hyper_gru_5_5 --tb_d
 r 0.2 --emb_init_avg_norm 0.0005 --epochs 30 --model haddrnn --batch_size 512 --print_every 50 --device gpu
 ```
 
-## Running unit tests
+## 4. Extract predictions from the test set using a trained model
+
+```
+python hypernn/test.py --mode test --resume_snapshot .saved_models/hyper_gru_5_5/best_snapshot_devacc_56.85175751400917_devloss_0.9821267057980991__iter_59000_model.pt --experiment_dir logs/hyper_gru_5_5_2019-05-07T19-40-40
+```
+Supply, `--resume_snapshot` and `experiment_dir` appropriately from your training run. (Look at the console log of your training to find the paths to these two).
+
+## Running unit tests (NOT MANDATORY)
 
 ```
 $ chmod +x run_tests.sh
