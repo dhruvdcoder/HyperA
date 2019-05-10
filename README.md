@@ -126,6 +126,11 @@ python hypernn/test.py --mode test --resume_snapshot .saved_models/hyper_gru_5_5
 ```
 Supply, `--resume_snapshot` and `experiment_dir` appropriately from your training run. (Look at the console log of your training to find the paths to these two).
 
+# Running baselines
+
+Please see the README file in the Baseline folder.
+
+
 ## Running unit tests (NOT MANDATORY)
 
 ```
