@@ -36,8 +36,6 @@ def get_args():
         default=Path(__file__).parent.parent,
         help='Path to root directory for the project.')
     parser.add_argument(
-        '-s', '--save_to_latex', action='store_true', default=False)
-    parser.add_argument(
         '-l',
         '--logging_level',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
@@ -55,7 +53,7 @@ def get_args():
         type=Path)
     parser.add_argument(
         '--val_set',
-        help='file name of train dataset',
+        help='file name of dev dataset',
         default='multinli_1.0_dev_matched.jsonl',
         type=Path)
     parser.add_argument(
@@ -66,7 +64,8 @@ def get_args():
     parser.add_argument(
         '--max_seq_len',
         default=None,
-        help='Max sentence length',
+        help=
+        'Max sentence length. If you want to truncate sentences. Default: None',
         type=int_or_None)
     parser.add_argument(
         '--vector_cache',
@@ -83,7 +82,8 @@ def get_args():
         type=float,
         help=('Average norm for uniformly initialized word embs.'
               'Required if --use_pretrained is False'))
-    parser.add_argument('--freeze_emb', action='store_true')
+    parser.add_argument(
+        '--freeze_emb', action='store_true', help='Freeze embedding')
     parser.add_argument(
         '--resume_snapshot',
         type=Path,
@@ -136,9 +136,12 @@ def get_args():
         '--model',
         default='hconcatgru',
         choices=model_zoo,
-        help='/'.join(model_zoo))
+        help='Pick the model to train')
     parser.add_argument(
-        '--rnn', default='RNN', choices=rnns, help='/'.join(rnns))
+        '--rnn',
+        default='RNN',
+        choices=rnns,
+        help='Only used when using RNN based sentence encoder')
     parser.add_argument(
         '--combine_op',
         default='add',
@@ -147,12 +150,41 @@ def get_args():
         'Method used to combine the reps of premise and hypo when using model "haddrnn".'
     )
     parser.add_argument('--hidden_dim', type=int, default=50)
-    parser.add_argument('--hyp_bias_lr', type=float, default=0.01)
-    parser.add_argument('--hyp_emb_lr', type=float, default=0.1)
-    parser.add_argument('--euc_lr', type=float, default=0.001)
-    parser.add_argument('--print_every', type=int, default=5)
-    parser.add_argument('--val_every', type=int, default=500)
-    parser.add_argument('--debug_grad', action='store_true')
+    parser.add_argument(
+        '--hyp_bias_lr',
+        type=float,
+        default=0.01,
+        help=
+        'Learning rate for the bias parameters in the hyperbolic space (used by RSGD)'
+    )
+    parser.add_argument(
+        '--hyp_emb_lr',
+        type=float,
+        default=0.1,
+        help=
+        'Learning rate for the embedding parameters in the hyperbolic space (used by RSGD)'
+    )
+    parser.add_argument(
+        '--euc_lr',
+        type=float,
+        default=0.001,
+        help=
+        'Learning rate for layers parameterized by euclidean params (used by Adam)'
+    )
+    parser.add_argument(
+        '--print_every',
+        type=int,
+        default=5,
+        help='Print training summary every')
+    parser.add_argument(
+        '--val_every',
+        type=int,
+        default=500,
+        help='Run eval loop on dev data every val_every iterations')
+    parser.add_argument(
+        '--debug_grad',
+        action='store_true',
+        help='Pass this if debugging occurances of NaNs and Infs in gradients')
     args = parser.parse_args()
     return args
 
