@@ -1,6 +1,6 @@
 # Hyperbolic Attention
 
-**Unofficial** implementation of the Neural Network components proposed in [Hyperbolic Neural Networks (NeurIPS)](https://papers.nips.cc/paper/7780-hyperbolic-neural-networks.pdf) plus experiments and implementations with attention mechanisms in Hyperbolic Space. 
+**Unofficial** pytorch implementation of the Neural Network components proposed in [Hyperbolic Neural Networks (NeurIPS)](https://papers.nips.cc/paper/7780-hyperbolic-neural-networks.pdf) plus experiments and implementations with attention mechanisms in Hyperbolic Space. 
 
 # Usage
 
