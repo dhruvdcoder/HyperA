@@ -1,6 +1,6 @@
 # Hyperbolic Attention
 
-Team Project for CS690D at UMass Amherst
+**Unofficial** implementation of the Neural Network components proposed in [Hyperbolic Neural Networks (NeurIPS)](https://papers.nips.cc/paper/7780-hyperbolic-neural-networks.pdf) plus experiments and implementations with attention mechanisms in Hyperbolic Space. 
 
 # Usage
 
@@ -138,3 +138,11 @@ $ chmod +x run_tests.sh
 $ ./run_tests.sh
 ```
 
+# Contributors
+1. [Dhruvesh Patel](https://github.com/dhruvdcoder)
+
+2. [Prashant Ranjan](https://github.com/PrashantRanjan09)
+
+3. [Praful Johri](https://github.com/prafuljohari)
+
+4. [Rishabh Gupta](https://github.com/rishabh1694)
