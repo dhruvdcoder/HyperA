@@ -30,7 +30,7 @@ plac==0.9.6
 pluggy==0.9.0
 preshed==2.0.1
 protobuf==3.7.1
-py==1.8.0
+py==1.10.0
 pytest==4.4.0
 python-dateutil==2.8.0
 requests==2.21.0
